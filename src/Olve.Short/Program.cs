@@ -12,7 +12,7 @@ var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok());
 
-app.MapGet("/echo", (string? message) =>
+app.MapGet("/echo", Result<string> (string? message) =>
 {
     var result = new StringValidator()
         .CannotBeNullOrWhiteSpace()
@@ -20,8 +20,8 @@ app.MapGet("/echo", (string? message) =>
         .Validate(message)
         .WithValueOnSuccess(message ?? string.Empty);
 
-    return result.ToHttpResult();
-});
+    return result;
+}).WithResultMapping<string>();
 
 app.Run();
 
