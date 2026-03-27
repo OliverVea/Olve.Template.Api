@@ -1,0 +1,187 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Olve.Short | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Olve.Short"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/echo": {
+      "get": {
+        "tags": [
+          "Olve.Short"
+        ],
+        "parameters": [
+          {
+            "name": "message",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResultProblem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Exception": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "helpLink": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hResult": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "innerException": {
+            "$ref": "#/components/schemas/Exception"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stackTrace": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "targetSite": {
+            "$ref": "#/components/schemas/MethodBase"
+          }
+        }
+      },
+      "IPath": { },
+      "MethodBase": { },
+      "ProblemOriginInformation": {
+        "type": "object",
+        "properties": {
+          "filePath": {
+            "$ref": "#/components/schemas/IPath"
+          },
+          "lineNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "linkString": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ResultProblem": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "severity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "args": {
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "source": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "exception": {
+            "$ref": "#/components/schemas/Exception"
+          },
+          "originInformation": {
+            "$ref": "#/components/schemas/ProblemOriginInformation"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Olve.Short"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ builder.Configuration
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
 builder.Services.WithPathJsonConversion();
+builder.Services.AddOpenApi();
 
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
@@ -23,6 +24,8 @@ var port = builder.Configuration["Port"] ?? "5000";
 builder.WebHost.UseUrls($"http://{host}:{port}");
 
 var app = builder.Build();
+
+app.MapOpenApi();
 
 var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Olve.Short");
 

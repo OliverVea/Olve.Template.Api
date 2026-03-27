@@ -6,9 +6,16 @@
     <Nullable>enable</Nullable>
     <PublishSelfContained>true</PublishSelfContained>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <OpenApiDocumentsDirectory>$(MSBuildThisFileDirectory)..\..\</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOptions>--file-name api</OpenApiGenerateDocumentsOptions>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="*" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Olve.MinimalApi" Version="*" />
     <PackageReference Include="Olve.Results" Version="*" />
     <PackageReference Include="Olve.Validation" Version="*" />
