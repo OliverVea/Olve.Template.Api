@@ -8,7 +8,11 @@
 
   <ItemGroup>
     <PackageReference Include="TUnit" Version="*" />
-    <PackageReference Include="Testcontainers" Version="*" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Olve.Short/Olve.Short.csproj" />
   </ItemGroup>
 
 </Project>

@@ -7,4 +7,11 @@
     <PublishAot>true</PublishAot>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Olve.MinimalApi" Version="*" />
+    <PackageReference Include="Olve.Results" Version="*" />
+    <PackageReference Include="Olve.Validation" Version="*" />
+    <PackageReference Include="Olve.Utilities" Version="*" />
+  </ItemGroup>
+
 </Project>

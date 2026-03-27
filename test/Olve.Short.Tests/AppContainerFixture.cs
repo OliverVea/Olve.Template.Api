@@ -1,23 +1,12 @@
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Olve.Short.Tests;
 
-public class AppContainerFixture : IAsyncDisposable
+public class AppFixture : IAsyncDisposable
 {
-    private readonly IContainer _container;
+    private readonly WebApplicationFactory<Program> _factory = new();
 
-    public string BaseUrl => $"http://localhost:{_container.GetMappedPublicPort(8080)}";
+    public HttpClient CreateClient() => _factory.CreateClient();
 
-    public AppContainerFixture()
-    {
-        _container = new ContainerBuilder("olve-short:latest")
-            .WithPortBinding(8080, true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPort(8080).ForPath("/health")))
-            .Build();
-    }
-
-    public Task StartAsync() => _container.StartAsync();
-
-    public ValueTask DisposeAsync() => _container.DisposeAsync();
+    public ValueTask DisposeAsync() => _factory.DisposeAsync();
 }
