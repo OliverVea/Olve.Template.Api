@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Olve.Short/Olve.Short.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Olve.Short.Tests/Olve.Short.Tests.csproj" />
+  </Folder>
+</Solution>
