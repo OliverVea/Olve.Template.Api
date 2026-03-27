@@ -4,11 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PublishAot>true</PublishAot>
-    <PublishTrimmed>true</PublishTrimmed>
     <PublishSelfContained>true</PublishSelfContained>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <NoWarn>IL3053</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

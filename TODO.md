@@ -1,7 +1,6 @@
 # TODO
 
 - [ ] Add OpenAPI spec generation from the API
-- [ ] Set up structured logging
-- [ ] Set up configuration (appsettings, environment-based config)
+- [ ] Add Helm chart for Kubernetes deployment
 - [ ] Turn the project into a `dotnet new` solution template once the foundation is solid
-- [ ] Fix AOT analysis warnings in `Olve.MinimalApi` (IL3053) — currently suppressed in `Olve.Short.csproj`. Once the package is AOT-compatible, remove the `<NoWarn>IL3053</NoWarn>` suppression.
+- [ ] Re-enable AOT and trimming once `Olve.MinimalApi` and `Olve.Results` are AOT-compatible (IL2026/IL3053 issues with ResultProblem.Exception and IPath serialization)
