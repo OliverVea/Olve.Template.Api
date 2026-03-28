@@ -37,6 +37,7 @@ app.Run();
 
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(Result<string>))]
+[JsonSerializable(typeof(ResultProblem[]))]
 internal partial class AppJsonContext : JsonSerializerContext;
 
 public partial class Program;
