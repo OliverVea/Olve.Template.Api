@@ -36,3 +36,17 @@ secrets:
   - name: authentik-oidc-secrets
     envMap:
       OpenTelemetry__OAuth2__ClientSecret: olve-template-api-client-secret
+
+slo:
+  enabled: true
+  labels:
+    owner: "oliver"
+    tier: "2"
+  objectives:
+    availability:
+      target: 99.9
+      description: "HTTP requests should not return 5xx errors."
+    latency:
+      target: 99
+      threshold: "0.5"
+      description: "HTTP requests should complete within 500ms."
