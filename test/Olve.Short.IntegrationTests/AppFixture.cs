@@ -8,8 +8,6 @@ public class AppFixture : IAsyncDisposable
 {
     private readonly WebApplicationFactory<Program> _factory = new();
 
-    public HttpClient CreateClient() => _factory.CreateClient();
-
     public IOlveShortv1 CreateApiClient() =>
         RestService.For<IOlveShortv1>(_factory.CreateClient());
 

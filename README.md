@@ -73,11 +73,11 @@ Integration tests use `WebApplicationFactory` — no Docker required.
 
 ## Client Libraries
 
-### C# (Refitter)
+### C# ([Refitter](https://refitter.github.io/))
 
-The `clients/Olve.Short.Client/` project uses the Refitter source generator to produce a typed Refit interface from `api.json` at build time. Just build the solution — no manual codegen step needed.
+The `clients/Olve.Short.Client/` project uses the [Refitter source generator](https://www.nuget.org/packages/Refitter.SourceGenerator) to produce a typed [Refit](https://github.com/reactiveui/refit) interface from `api.json` at build time. Just build the solution — no manual codegen step needed.
 
-### TypeScript (Kiota)
+### TypeScript ([Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview))
 
 The `clients/olve-short-client-ts/` directory contains a Kiota-generated TypeScript client. To regenerate after API changes:
 

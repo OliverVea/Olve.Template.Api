@@ -41,9 +41,9 @@ helm/olve-short/                         # Helm chart for Kubernetes
 ## Conventions
 
 - **Framework**: .NET 10, C# with file-scoped namespaces, nullable enabled, implicit usings
-- **Error handling**: `Olve.Results` for non-throwing result types, `Olve.Validation` for input validation
-- **API patterns**: `Olve.MinimalApi` for result mapping to HTTP responses
-- **Test framework**: TUnit (not xUnit/NUnit). Tests use `await Assert.That(...)` fluent syntax.
+- **Error handling**: [Olve.Results](https://olivervea.github.io/Olve.Utilities/src/Olve.Results/README.html) for non-throwing result types, [Olve.Validation](https://olivervea.github.io/Olve.Utilities/src/Olve.Validation/README.html) for input validation
+- **API patterns**: [Olve.MinimalApi](https://olivervea.github.io/Olve.Utilities/src/Olve.MinimalApi/README.html) for result mapping to HTTP responses
+- **Test framework**: [TUnit](https://tunit.dev/docs/) (not xUnit/NUnit). Tests use `await Assert.That(...)` fluent syntax.
 - **Package versions**: Use `Version="*"` (floating) in .csproj files
 - **Test execution**: MSBuild properties control which tests run:
   - `RunUnitTests=false` skips unit tests
@@ -52,11 +52,11 @@ helm/olve-short/                         # Helm chart for Kubernetes
 
 ## Client Generation
 
-### C# client (Refitter)
+### C# client ([Refitter](https://refitter.github.io/))
 
-The C# client in `clients/Olve.Short.Client/` is generated at build time via the Refitter source generator. The generated code at `Generated/Refitter.g.cs` should be committed. No manual steps needed — just build the project.
+The C# client in `clients/Olve.Short.Client/` is generated at build time via the [Refitter source generator](https://www.nuget.org/packages/Refitter.SourceGenerator). It produces typed [Refit](https://github.com/reactiveui/refit) interfaces from `api.json`. No manual steps needed — just build the project.
 
-### TypeScript client (Kiota)
+### TypeScript client ([Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview))
 
 ```bash
 dotnet tool restore

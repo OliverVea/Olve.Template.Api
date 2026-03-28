@@ -12,6 +12,11 @@
 - [x] Add `CLAUDE.md` with build/test commands, structure, conventions
 - [x] Update `README.md` and `.slnx` to reflect new structure
 
+## Testing Infrastructure
+
+- [ ] Add mock/stub infrastructure for unit tests (replace `NullLogger` with proper test doubles)
+- [ ] Add custom result mapper: `ServerErrorResult` (500, returned randomly 1/20 times) and `ClientErrorResult` (400, from validation)
+
 ## Future
 
 - [ ] Create monorepo `Olve.Services` and migrate this template into `services/Olve.Short/`
