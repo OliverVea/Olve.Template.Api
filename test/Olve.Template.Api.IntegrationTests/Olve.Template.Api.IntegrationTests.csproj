@@ -9,11 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TUnit" Version="*" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="*" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="TUnit" Version="*" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="*" />
     <PackageReference Include="Refit" Version="*" />
   </ItemGroup>
 

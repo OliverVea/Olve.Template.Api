@@ -1,8 +1,8 @@
-using Refit;
+using System.Net;
 
 namespace Olve.Template.Api.IntegrationTests;
 
-public class EchoTests
+public class MessageTests
 {
     private static readonly AppFixture Fixture = new();
 
@@ -10,23 +10,33 @@ public class EchoTests
     public static async Task Teardown() => await Fixture.DisposeAsync();
 
     [Test]
-    public async Task Echo_ReturnsMessage()
+    public async Task PostMessage_Authenticated_ReturnsMessage()
     {
         var api = Fixture.CreateApiClient();
 
-        var result = await api.Echo("hello");
+        var result = await api.MessagePOST("hello");
 
         await Assert.That(result).IsEqualTo("\"hello\"");
     }
 
     [Test]
-    public async Task Echo_EmptyMessage_ReturnsBadRequest()
+    public async Task PostMessage_Unauthenticated_Returns401()
+    {
+        var client = Fixture.CreateUnauthenticatedHttpClient();
+
+        var response = await client.PostAsync("/message?message=hello", null);
+
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+    }
+
+    [Test]
+    public async Task GetMessage_AfterPost_ReturnsMessage()
     {
         var api = Fixture.CreateApiClient();
 
-        var exception = await Assert.ThrowsAsync<ApiException>(async () => await api.Echo(""));
+        await api.MessagePOST("hello");
+        var result = await api.MessageGET();
 
-        await Assert.That(exception).IsNotNull();
-        await Assert.That((int)exception!.StatusCode).IsEqualTo(400);
+        await Assert.That(result).IsEqualTo("\"hello\"");
     }
 }

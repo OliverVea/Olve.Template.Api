@@ -11,6 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Duende.IdentityModel" Version="*" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="*" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="*" />
     <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="*">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -20,6 +22,9 @@
     <PackageReference Include="Olve.Results" Version="*" />
     <PackageReference Include="Olve.Validation" Version="*" />
     <PackageReference Include="Olve.Utilities" Version="*" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="*" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="*" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="*" />
   </ItemGroup>
 
 </Project>

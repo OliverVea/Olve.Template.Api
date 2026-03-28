@@ -1,48 +1,66 @@
 using Microsoft.Extensions.Logging;
-using Olve.Template.Api.Echo;
+using Olve.Template.Api.Message;
 using Rocks;
 
 namespace Olve.Template.Api.UnitTests;
 
-public class EchoServiceTests
+public class MessageServiceTests
 {
-    private readonly EchoService _sut;
+    private readonly MessageService _sut;
 
-    public EchoServiceTests()
+    public MessageServiceTests()
     {
-        var mock = new ILoggerMakeExpectations<EchoService>().Instance();
-        _sut = new EchoService(mock);
+        var mock = new ILoggerMakeExpectations<MessageService>().Instance();
+        _sut = new MessageService(mock);
     }
 
     [Test]
-    public async Task Echo_ValidMessage_ReturnsMessage()
+    public async Task Get_NoMessageSet_ReturnsProblems()
     {
-        var result = _sut.Echo("hello");
+        var result = _sut.Get();
+
+        await Assert.That(result.TryPickProblems(out _, out _)).IsTrue();
+    }
+
+    [Test]
+    public async Task Set_ValidMessage_ReturnsMessage()
+    {
+        var result = _sut.Set("hello");
 
         await Assert.That(result.TryPickValue(out var value, out _)).IsTrue();
         await Assert.That(value).IsEqualTo("hello");
     }
 
     [Test]
-    public async Task Echo_NullMessage_ReturnsProblems()
+    public async Task Set_ThenGet_ReturnsSetMessage()
     {
-        var result = _sut.Echo(null);
+        _sut.Set("hello");
+        var result = _sut.Get();
+
+        await Assert.That(result.TryPickValue(out var value, out _)).IsTrue();
+        await Assert.That(value).IsEqualTo("hello");
+    }
+
+    [Test]
+    public async Task Set_NullMessage_ReturnsProblems()
+    {
+        var result = _sut.Set(null);
 
         await Assert.That(result.TryPickProblems(out _, out _)).IsTrue();
     }
 
     [Test]
-    public async Task Echo_EmptyMessage_ReturnsProblems()
+    public async Task Set_EmptyMessage_ReturnsProblems()
     {
-        var result = _sut.Echo("");
+        var result = _sut.Set("");
 
         await Assert.That(result.TryPickProblems(out _, out _)).IsTrue();
     }
 
     [Test]
-    public async Task Echo_WhitespaceMessage_ReturnsProblems()
+    public async Task Set_WhitespaceMessage_ReturnsProblems()
     {
-        var result = _sut.Echo("   ");
+        var result = _sut.Set("   ");
 
         await Assert.That(result.TryPickProblems(out _, out _)).IsTrue();
     }

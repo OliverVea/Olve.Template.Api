@@ -17,8 +17,38 @@
         }
       }
     },
-    "/echo": {
+    "/message": {
       "get": {
+        "tags": [
+          "Olve.Template.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResultProblem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
         "tags": [
           "Olve.Template.Api"
         ],
@@ -61,90 +91,24 @@
   },
   "components": {
     "schemas": {
-      "Exception": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": [
-              "null",
-              "object"
-            ]
-          },
-          "helpLink": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "hResult": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "innerException": {
-            "$ref": "#/components/schemas/Exception"
-          },
-          "message": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "source": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "stackTrace": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "targetSite": {
-            "$ref": "#/components/schemas/MethodBase"
-          }
-        }
-      },
-      "IPath": { },
-      "MethodBase": { },
-      "ProblemOriginInformation": {
-        "type": "object",
-        "properties": {
-          "filePath": {
-            "$ref": "#/components/schemas/IPath"
-          },
-          "lineNumber": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "linkString": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "ResultProblem": {
+        "required": [
+          "message",
+          "tags",
+          "severity",
+          "source",
+          "exceptionSummary"
+        ],
         "type": "object",
         "properties": {
           "message": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string"
           },
           "tags": {
-            "type": "array",
+            "type": [
+              "null",
+              "array"
+            ],
             "items": {
               "type": "string"
             }
@@ -157,23 +121,17 @@
             ],
             "format": "int32"
           },
-          "args": {
-            "type": [
-              "null",
-              "array"
-            ]
-          },
           "source": {
             "type": [
               "null",
               "string"
             ]
           },
-          "exception": {
-            "$ref": "#/components/schemas/Exception"
-          },
-          "originInformation": {
-            "$ref": "#/components/schemas/ProblemOriginInformation"
+          "exceptionSummary": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       }
