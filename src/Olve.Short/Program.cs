@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Olve.MinimalApi;
 using Olve.Results;
-using Olve.Validation.Validators;
+using Olve.Short.Echo;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
@@ -16,6 +16,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
 builder.Services.WithPathJsonConversion();
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<EchoService>();
 
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
@@ -27,25 +28,10 @@ var app = builder.Build();
 
 app.MapOpenApi();
 
-var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Olve.Short");
-
 app.MapGet("/health", () => Results.Ok());
 
-app.MapGet("/echo", Result<string> (string? message) =>
-{
-    var result = new StringValidator()
-        .CannotBeNullOrWhiteSpace()
-        .WithMessage("'message' query parameter cannot be empty.")
-        .Validate(message)
-        .WithValueOnSuccess(message ?? string.Empty);
-
-    if (result.TryPickProblems(out _, out _))
-    {
-        logger.LogWarning("Echo validation failed for message: {Message}", message);
-    }
-
-    return result;
-}).WithResultMapping<string>();
+app.MapGet("/echo", (string? message, EchoService echo) => echo.Echo(message))
+    .WithResultMapping<string>();
 
 app.Run();
 

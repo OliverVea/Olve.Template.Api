@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsTestProject Condition="'$(RunIntegrationTests)' != 'true'">false</IsTestProject>
+    <IsTestingPlatformApplication Condition="'$(RunIntegrationTests)' != 'true'">false</IsTestingPlatformApplication>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,7 +14,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Refit" Version="*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../src/Olve.Short/Olve.Short.csproj" />
+    <ProjectReference Include="../../clients/Olve.Short.Client/Olve.Short.Client.csproj" />
   </ItemGroup>
 
 </Project>

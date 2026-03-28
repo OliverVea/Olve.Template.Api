@@ -5,14 +5,19 @@ A URL shortener service built with .NET 10 minimal APIs.
 ## Project Structure
 
 ```
-├── src/Olve.Short/          # API application
-│   ├── Program.cs           # Endpoints, configuration, logging
-│   ├── Dockerfile           # Multi-stage build (aspnet chiseled)
-│   └── appsettings.json     # Default configuration
-├── test/Olve.Short.Tests/   # Integration tests (TUnit + WebApplicationFactory)
-├── helm/olve-short/         # Helm chart for Kubernetes
-├── api.json                 # OpenAPI spec (generated on build)
-└── compose.yaml             # Docker Compose for local development
+├── src/Olve.Short/                      # API application
+│   ├── Program.cs                       # Endpoints, configuration, logging
+│   ├── Echo/EchoService.cs              # Echo service
+│   ├── Dockerfile                       # Multi-stage build (aspnet chiseled)
+│   └── appsettings.json                 # Default configuration
+├── test/Olve.Short.UnitTests/           # Unit tests (TUnit)
+├── test/Olve.Short.IntegrationTests/    # Integration tests (TUnit + WebApplicationFactory)
+├── clients/Olve.Short.Client/           # Generated C# HTTP client (Refitter)
+├── clients/olve-short-client-ts/        # Generated TypeScript HTTP client (Kiota)
+├── tools/version.cs                     # CalVer versioning script
+├── helm/olve-short/                     # Helm chart for Kubernetes
+├── api.json                             # OpenAPI spec (generated on build)
+└── compose.yaml                         # Docker Compose for local development
 ```
 
 ## Endpoints
@@ -54,10 +59,32 @@ helm install olve-short helm/olve-short
 ## Testing
 
 ```bash
+# Unit tests only (default)
 dotnet test
+
+# Integration tests only
+dotnet test -p:RunIntegrationTests=true -p:RunUnitTests=false
+
+# All tests
+dotnet test -p:RunIntegrationTests=true
 ```
 
 Integration tests use `WebApplicationFactory` — no Docker required.
+
+## Client Libraries
+
+### C# ([Refitter](https://refitter.github.io/))
+
+The `clients/Olve.Short.Client/` project uses the [Refitter source generator](https://www.nuget.org/packages/Refitter.SourceGenerator) to produce a typed [Refit](https://github.com/reactiveui/refit) interface from `api.json` at build time. Just build the solution — no manual codegen step needed.
+
+### TypeScript ([Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview))
+
+The `clients/olve-short-client-ts/` directory contains a Kiota-generated TypeScript client. To regenerate after API changes:
+
+```bash
+dotnet tool restore
+dotnet kiota generate -l typescript -d api.json -c OlveShortClient -o clients/olve-short-client-ts/src -n OlveShort
+```
 
 ## References
 
