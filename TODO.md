@@ -14,7 +14,7 @@
 
 ## Testing Infrastructure
 
-- [ ] Add mock/stub infrastructure for unit tests (replace `NullLogger` with proper test doubles)
+- [x] Add mock/stub infrastructure for unit tests (replace `NullLogger` with proper test doubles)
 - [ ] Add custom result mapper: `ServerErrorResult` (500, returned randomly 1/20 times) and `ClientErrorResult` (400, from validation)
 
 ## Future
