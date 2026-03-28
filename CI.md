@@ -91,7 +91,7 @@ dotnet run tools/version.cs -- --ci --run-number 42
 
 # With runtime identifier for artifact naming
 dotnet run tools/version.cs -- --ci --run-number 42 --rid linux-x64
-# artifact-name=olve-short-2026.3.28.42+cb9a99b-linux-x64
+# artifact-name=olve-template-api-2026.3.28.42+cb9a99b-linux-x64
 ```
 
 ## Test commands

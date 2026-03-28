@@ -3,7 +3,7 @@ using System.Diagnostics;
 var ci = false;
 var runNumber = 0;
 var rid = "";
-var name = "olve-short";
+var name = "olve-template-api";
 
 for (var i = 0; i < args.Length; i++)
 {

@@ -1,6 +1,6 @@
 using Refit;
 
-namespace Olve.Short.IntegrationTests;
+namespace Olve.Template.Api.IntegrationTests;
 
 public class EchoTests
 {

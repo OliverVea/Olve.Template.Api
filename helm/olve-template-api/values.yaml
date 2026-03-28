@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: olve-short
+  repository: olve-template-api
   tag: latest
   pullPolicy: IfNotPresent
 
