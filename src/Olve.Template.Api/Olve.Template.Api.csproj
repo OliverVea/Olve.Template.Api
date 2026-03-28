@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PublishSelfContained>true</PublishSelfContained>
+    <PublishAot>true</PublishAot>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <OpenApiDocumentsDirectory>$(MSBuildThisFileDirectory)..\..\</OpenApiDocumentsDirectory>
     <OpenApiGenerateDocumentsOptions>--file-name api</OpenApiGenerateDocumentsOptions>

@@ -22,4 +22,4 @@
 - [ ] Create monorepo `Olve.Services` and migrate this template into `services/Olve.Template.Api/`
 - [x] Rename this repo to `Olve.Template.Api`
 - [ ] Turn into a `dotnet new` solution template once the foundation is solid
-- [ ] Re-enable AOT and trimming once Olve packages support it (OliverVea/Olve.Utilities#59, OliverVea/Olve.Utilities#60)
+- [x] Re-enable AOT and trimming once Olve packages support it (OliverVea/Olve.Utilities#59, OliverVea/Olve.Utilities#60)
