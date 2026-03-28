@@ -1,7 +1,7 @@
 using Olve.Results;
 using Olve.Validation.Validators;
 
-namespace Olve.Short.Echo;
+namespace Olve.Template.Api.Echo;
 
 public class EchoService(ILogger<EchoService> logger)
 {

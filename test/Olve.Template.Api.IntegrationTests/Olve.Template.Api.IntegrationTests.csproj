@@ -18,8 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Olve.Short/Olve.Short.csproj" />
-    <ProjectReference Include="../../clients/Olve.Short.Client/Olve.Short.Client.csproj" />
+    <ProjectReference Include="../../src/Olve.Template.Api/Olve.Template.Api.csproj" />
+    <ProjectReference Include="../../clients/Olve.Template.Api.Client/Olve.Template.Api.Client.csproj" />
   </ItemGroup>
 
 </Project>

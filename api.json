@@ -1,14 +1,14 @@
 {
   "openapi": "3.1.1",
   "info": {
-    "title": "Olve.Short | v1",
+    "title": "Olve.Template.Api | v1",
     "version": "1.0.0"
   },
   "paths": {
     "/health": {
       "get": {
         "tags": [
-          "Olve.Short"
+          "Olve.Template.Api"
         ],
         "responses": {
           "200": {
@@ -20,7 +20,7 @@
     "/echo": {
       "get": {
         "tags": [
-          "Olve.Short"
+          "Olve.Template.Api"
         ],
         "parameters": [
           {
@@ -181,7 +181,7 @@
   },
   "tags": [
     {
-      "name": "Olve.Short"
+      "name": "Olve.Template.Api"
     }
   ]
 }

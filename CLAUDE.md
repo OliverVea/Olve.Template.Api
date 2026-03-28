@@ -2,7 +2,7 @@
 
 ## Project
 
-Olve.Short — a .NET 10 minimal API URL shortener template.
+Olve.Template.Api — a .NET 10 minimal API service template.
 
 ## Build & Test
 
@@ -21,7 +21,7 @@ dotnet test -p:RunIntegrationTests=true -p:RunUnitTests=false
 dotnet test -p:RunIntegrationTests=true
 
 # Run the API locally
-dotnet run --project src/Olve.Short
+dotnet run --project src/Olve.Template.Api
 ```
 
 See [CI.md](CI.md) for CI workflow examples.
@@ -29,13 +29,13 @@ See [CI.md](CI.md) for CI workflow examples.
 ## Project Structure
 
 ```
-src/Olve.Short/                          # API application (minimal API)
-test/Olve.Short.UnitTests/               # Unit tests (TUnit)
-test/Olve.Short.IntegrationTests/        # Integration tests (TUnit + WebApplicationFactory)
-clients/Olve.Short.Client/               # Generated C# client (Refitter source gen)
-clients/olve-short-client-ts/            # Generated TypeScript client (Kiota)
+src/Olve.Template.Api/                          # API application (minimal API)
+test/Olve.Template.Api.UnitTests/               # Unit tests (TUnit)
+test/Olve.Template.Api.IntegrationTests/        # Integration tests (TUnit + WebApplicationFactory)
+clients/Olve.Template.Api.Client/               # Generated C# client (Refitter source gen)
+clients/olve-template-api-client-ts/            # Generated TypeScript client (Kiota)
 tools/version.cs                         # CalVer versioning script
-helm/olve-short/                         # Helm chart for Kubernetes
+helm/olve-template-api/                         # Helm chart for Kubernetes
 ```
 
 ## Conventions
@@ -54,11 +54,11 @@ helm/olve-short/                         # Helm chart for Kubernetes
 
 ### C# client ([Refitter](https://refitter.github.io/))
 
-The C# client in `clients/Olve.Short.Client/` is generated at build time via the [Refitter source generator](https://www.nuget.org/packages/Refitter.SourceGenerator). It produces typed [Refit](https://github.com/reactiveui/refit) interfaces from `api.json`. No manual steps needed — just build the project.
+The C# client in `clients/Olve.Template.Api.Client/` is generated at build time via the [Refitter source generator](https://www.nuget.org/packages/Refitter.SourceGenerator). It produces typed [Refit](https://github.com/reactiveui/refit) interfaces from `api.json`. No manual steps needed — just build the project.
 
 ### TypeScript client ([Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview))
 
 ```bash
 dotnet tool restore
-dotnet kiota generate -l typescript -d api.json -c OlveShortClient -o clients/olve-short-client-ts/src -n OlveShort
+dotnet kiota generate -l typescript -d api.json -c OlveTemplateApiClient -o clients/olve-template-api-client-ts/src -n OlveTemplateApi
 ```

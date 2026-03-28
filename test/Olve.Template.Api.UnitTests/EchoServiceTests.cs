@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
-using Olve.Short.Echo;
+using Olve.Template.Api.Echo;
 using Rocks;
 
-namespace Olve.Short.UnitTests;
+namespace Olve.Template.Api.UnitTests;
 
 public class EchoServiceTests
 {

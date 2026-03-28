@@ -1,15 +1,15 @@
 using Microsoft.AspNetCore.Mvc.Testing;
-using Olve.Short.Client;
+using Olve.Template.Api.Client;
 using Refit;
 
-namespace Olve.Short.IntegrationTests;
+namespace Olve.Template.Api.IntegrationTests;
 
 public class AppFixture : IAsyncDisposable
 {
     private readonly WebApplicationFactory<Program> _factory = new();
 
-    public IOlveShortv1 CreateApiClient() =>
-        RestService.For<IOlveShortv1>(_factory.CreateClient());
+    public IOlveTemplateApiv1 CreateApiClient() =>
+        RestService.For<IOlveTemplateApiv1>(_factory.CreateClient());
 
     public ValueTask DisposeAsync() => _factory.DisposeAsync();
 }

@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Olve.MinimalApi;
 using Olve.Results;
-using Olve.Short.Echo;
+using Olve.Template.Api.Echo;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 

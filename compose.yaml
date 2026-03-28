@@ -1,5 +1,5 @@
 services:
   app:
     build:
-      context: src/Olve.Short
+      context: src/Olve.Template.Api
       dockerfile: Dockerfile
