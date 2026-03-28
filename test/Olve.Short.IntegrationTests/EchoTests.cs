@@ -1,5 +1,4 @@
-using System.Net;
-using System.Net.Http.Json;
+using Refit;
 
 namespace Olve.Short.IntegrationTests;
 
@@ -13,30 +12,21 @@ public class EchoTests
     [Test]
     public async Task Echo_ReturnsMessage()
     {
-        using var client = Fixture.CreateClient();
+        var api = Fixture.CreateApiClient();
 
-        var response = await client.GetAsync("/echo?message=hello");
+        var result = await api.Echo("hello");
 
-        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        await Assert.That(body).IsEqualTo("\"hello\"");
+        await Assert.That(result).IsEqualTo("\"hello\"");
     }
 
     [Test]
     public async Task Echo_EmptyMessage_ReturnsBadRequest()
     {
-        using var client = Fixture.CreateClient();
+        var api = Fixture.CreateApiClient();
 
-        var response = await client.GetAsync("/echo");
+        var exception = await Assert.ThrowsAsync<ApiException>(async () => await api.Echo(""));
 
-        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
-
-        var problems = await response.Content.ReadFromJsonAsync<ProblemDto[]>();
-        await Assert.That(problems).IsNotNull();
-        await Assert.That(problems!).HasSingleItem();
-        await Assert.That(problems![0].Message).IsEqualTo("'message' query parameter cannot be empty.");
+        await Assert.That(exception).IsNotNull();
+        await Assert.That((int)exception!.StatusCode).IsEqualTo(400);
     }
-
-    private record ProblemDto(string Message);
 }

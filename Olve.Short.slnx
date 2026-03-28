@@ -6,4 +6,7 @@
     <Project Path="test/Olve.Short.UnitTests/Olve.Short.UnitTests.csproj" />
     <Project Path="test/Olve.Short.IntegrationTests/Olve.Short.IntegrationTests.csproj" />
   </Folder>
+  <Folder Name="/clients/">
+    <Project Path="clients/Olve.Short.Client/Olve.Short.Client.csproj" />
+  </Folder>
 </Solution>

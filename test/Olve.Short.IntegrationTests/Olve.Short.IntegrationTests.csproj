@@ -14,7 +14,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Refit" Version="*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../src/Olve.Short/Olve.Short.csproj" />
+    <ProjectReference Include="../../clients/Olve.Short.Client/Olve.Short.Client.csproj" />
   </ItemGroup>
 
 </Project>

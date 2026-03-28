@@ -4,13 +4,13 @@
 
 - [x] Extract `EchoService` to `src/Olve.Short/Echo/EchoService.cs`, refactor `/echo` endpoint to a lambda
 - [x] Split tests into `test/Olve.Short.UnitTests/` (unit tests for EchoService) and `test/Olve.Short.IntegrationTests/` (existing WebApplicationFactory tests)
-- [ ] Add `tools/version.cs` — CalVer versioning (`{Year}.{Month}.{Day}.{RunNumber}+{GitHash}`), copied from Olve.Trains
-- [ ] Add CI workflow (`.github/workflows/ci.yml`) — build, run UT+IT on Ubuntu, version on push to main
-- [ ] Set up C# client generation with Refitter (source gen from `api.json`) in `clients/Olve.Short.Client/`
-- [ ] Set up TS client generation with Kiota (dotnet tool from `api.json`) in `clients/olve-short-client-ts/`
-- [ ] Add `.editorconfig`
-- [ ] Add `CLAUDE.md` with build/test commands, structure, conventions
-- [ ] Update `README.md` and `.slnx` to reflect new structure
+- [x] Add `tools/version.cs` — CalVer versioning (`{Year}.{Month}.{Day}.{RunNumber}+{GitHash}`), copied from Olve.Trains
+- [x] Add CI workflow (`.github/workflows/ci.yml`) — build, run UT+IT on Ubuntu, version on push to main
+- [x] Set up C# client generation with Refitter (source gen from `api.json`) in `clients/Olve.Short.Client/`
+- [x] Set up TS client generation with Kiota (dotnet tool from `api.json`) in `clients/olve-short-client-ts/`
+- [x] Add `.editorconfig`
+- [x] Add `CLAUDE.md` with build/test commands, structure, conventions
+- [x] Update `README.md` and `.slnx` to reflect new structure
 
 ## Future
 
