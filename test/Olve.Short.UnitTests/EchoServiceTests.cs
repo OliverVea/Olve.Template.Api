@@ -1,11 +1,20 @@
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Olve.Short.Echo;
+using Rocks;
+
+[assembly: Rock(typeof(ILogger<>), BuildType.Make)]
 
 namespace Olve.Short.UnitTests;
 
 public class EchoServiceTests
 {
-    private readonly EchoService _sut = new(NullLogger<EchoService>.Instance);
+    private readonly EchoService _sut;
+
+    public EchoServiceTests()
+    {
+        var mock = new ILoggerMakeExpectations<EchoService>().Instance();
+        _sut = new EchoService(mock);
+    }
 
     [Test]
     public async Task Echo_ValidMessage_ReturnsMessage()
