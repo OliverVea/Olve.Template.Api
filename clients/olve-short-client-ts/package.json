@@ -1,9 +1,0 @@
-{
-  "name": "@olve/short-client",
-  "version": "0.0.0",
-  "description": "Generated TypeScript client for Olve.Short API",
-  "main": "src/olveShortClient.ts",
-  "dependencies": {
-    "@microsoft/kiota-bundle": "^1.0.0-preview.99"
-  }
-}
