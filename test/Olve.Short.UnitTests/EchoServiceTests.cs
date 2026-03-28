@@ -2,8 +2,6 @@ using Microsoft.Extensions.Logging;
 using Olve.Short.Echo;
 using Rocks;
 
-[assembly: Rock(typeof(ILogger<>), BuildType.Make)]
-
 namespace Olve.Short.UnitTests;
 
 public class EchoServiceTests
