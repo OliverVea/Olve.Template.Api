@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 
-namespace Olve.Short.Tests;
+namespace Olve.Short.IntegrationTests;
 
 public class EchoTests
 {

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 
-namespace Olve.Short.Tests;
+namespace Olve.Short.IntegrationTests;
 
 public class AppFixture : IAsyncDisposable
 {

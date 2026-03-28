@@ -3,6 +3,7 @@
     <Project Path="src/Olve.Short/Olve.Short.csproj" />
   </Folder>
   <Folder Name="/test/">
-    <Project Path="test/Olve.Short.Tests/Olve.Short.Tests.csproj" />
+    <Project Path="test/Olve.Short.UnitTests/Olve.Short.UnitTests.csproj" />
+    <Project Path="test/Olve.Short.IntegrationTests/Olve.Short.IntegrationTests.csproj" />
   </Folder>
 </Solution>
