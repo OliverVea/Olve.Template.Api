@@ -50,8 +50,7 @@
             ".claude/**",
             ".template.config/**",
             "TestResults/**",
-            "CLAUDE.md",
-            "CI.md"
+            "CLAUDE.md"
           ]
         }
       ]

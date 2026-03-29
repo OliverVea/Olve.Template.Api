@@ -1,26 +1,34 @@
 # Olve.Template.Api
 
-A .NET 10 minimal API service template.
+A .NET 10 minimal API service template. Install with `dotnet new` and scaffold a full solution with auth, telemetry, Helm chart, and client generation.
+
+## Usage
+
+```bash
+# Install the template
+dotnet new install .
+
+# Create a new project
+dotnet new olve-api -n "MyCompany.MyService"
+```
 
 ## Project Structure
 
 ```
-├── src/Olve.Template.Api/                  # API application
-│   ├── Program.cs                          # Endpoints, configuration, logging
-│   ├── Configuration/                      # Auth, telemetry, JSON, host config
-│   ├── Message/                            # Message service (example feature)
-│   ├── Health/                             # Health check endpoints
-│   ├── Dockerfile                          # Multi-stage build (AOT, chiseled)
-│   └── appsettings.json                    # Default configuration
-├── test/Olve.Template.Api.UnitTests/       # Unit tests (TUnit)
-├── test/Olve.Template.Api.IntegrationTests/# Integration tests (TUnit + WebApplicationFactory)
-├── clients/Olve.Template.Api.Client/       # Generated C# HTTP client (Refitter)
-├── clients/olve-template-api-client-ts/    # Generated TypeScript HTTP client (Kiota)
-├── tools/version.cs                        # CalVer versioning script
-├── helm/                                   # Helm chart for Kubernetes
-├── Directory.Build.props                   # Shared build properties
-├── Directory.Packages.props                # Central package version management
-└── api.json                                # OpenAPI spec (generated on build)
+src/Olve.Template.Api/                          # API application (minimal API)
+├── Configuration/                              # Auth, telemetry, JSON, host config
+├── Message/                                    # Message service (example feature)
+├── Health/                                     # Health check endpoints
+├── Dockerfile                                  # Multi-stage build (AOT, chiseled)
+└── appsettings.json                            # Default configuration
+test/Olve.Template.Api.UnitTests/               # Unit tests (TUnit + Rocks)
+test/Olve.Template.Api.IntegrationTests/        # Integration tests (TUnit + WebApplicationFactory)
+clients/Olve.Template.Api.Client/               # Generated C# client (Refitter source gen)
+clients/olve-template-api-client-ts/            # Generated TypeScript client (Kiota)
+tools/version.cs                                # CalVer versioning script
+helm/                                           # Helm chart for Kubernetes
+Directory.Build.props                           # Shared build properties (TFM, nullable, etc.)
+Directory.Packages.props                        # Central package version management
 ```
 
 ## Endpoints
@@ -31,6 +39,39 @@ A .NET 10 minimal API service template.
 | GET | `/message` | No | Retrieve stored message |
 | POST | `/message?message=<text>` | Yes (JWT) | Store a message |
 | GET | `/openapi/v1.json` | No | OpenAPI spec |
+
+## Build & Test
+
+```bash
+# Restore and build
+dotnet restore
+dotnet build
+
+# Unit tests only (default)
+dotnet test
+
+# Integration tests only
+dotnet test -p:RunIntegrationTests=true -p:RunUnitTests=false
+
+# All tests
+dotnet test -p:RunIntegrationTests=true
+```
+
+Integration tests use `WebApplicationFactory` — no Docker required.
+
+Test execution is controlled by MSBuild properties:
+- `RunUnitTests=false` skips unit tests
+- `RunIntegrationTests=true` enables integration tests (disabled by default)
+
+## Running
+
+```bash
+# Local
+dotnet run --project src/Olve.Template.Api
+
+# Kubernetes
+helm install olve-template-api helm/
+```
 
 ## Configuration
 
@@ -51,32 +92,7 @@ Sources in priority order (highest wins):
 | `Auth:SigningKey` | _(null)_ | Local HS256 key (bypasses OIDC, for dev) |
 | `OpenTelemetry:Endpoint` | `https://otel.ovea.pro` | OTLP endpoint (null = disabled) |
 
-## Running
-
-```bash
-# Local
-dotnet run --project src/Olve.Template.Api
-
-# Kubernetes
-helm install olve-template-api helm/
-```
-
-## Testing
-
-```bash
-# Unit tests only (default)
-dotnet test
-
-# Integration tests only
-dotnet test -p:RunIntegrationTests=true -p:RunUnitTests=false
-
-# All tests
-dotnet test -p:RunIntegrationTests=true
-```
-
-Integration tests use `WebApplicationFactory` — no Docker required.
-
-## Client Libraries
+## Client Generation
 
 ### C# ([Refitter](https://refitter.github.io/))
 
@@ -84,11 +100,105 @@ The `clients/Olve.Template.Api.Client/` project uses the [Refitter source genera
 
 ### TypeScript ([Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview))
 
-The `clients/olve-template-api-client-ts/` directory contains a Kiota-generated TypeScript client. To regenerate after API changes:
-
 ```bash
 dotnet tool restore
 dotnet kiota generate -l typescript -d api.json -c OlveTemplateApiClient -o clients/olve-template-api-client-ts/src -n OlveTemplateApi
+```
+
+## Versioning
+
+The `tools/version.cs` script computes CalVer versions:
+
+```bash
+# Local development
+dotnet run tools/version.cs
+# version=0.0.0-dev+cb9a99b
+
+# CI (pass run number from GitHub Actions)
+dotnet run tools/version.cs -- --ci --run-number 42
+# version=2026.3.28.42+cb9a99b
+
+# With runtime identifier for artifact naming
+dotnet run tools/version.cs -- --ci --run-number 42 --rid linux-x64
+# artifact-name=olve-template-api-2026.3.28.42+cb9a99b-linux-x64
+```
+
+## CI
+
+This template does not include a CI workflow — the actual workflow should live in the service's deployment repo. Below are examples to copy and adapt.
+
+### Example: PR workflow
+
+```yaml
+# .github/workflows/pr.yml
+name: PR
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: 10.0.100
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+      - run: dotnet test --no-restore --no-build -c Release
+      - run: dotnet test --no-restore --no-build -c Release -p:RunIntegrationTests=true -p:RunUnitTests=false
+```
+
+### Example: Push to main workflow
+
+```yaml
+# .github/workflows/push-main.yml
+name: Push to main
+
+on:
+  push:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: 10.0.100
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+      - run: dotnet test --no-restore --no-build -c Release
+      - run: dotnet test --no-restore --no-build -c Release -p:RunIntegrationTests=true -p:RunUnitTests=false
+
+  version:
+    name: Compute version
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      artifact-name: ${{ steps.version.outputs.artifact-name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Compute version
+        id: version
+        run: |
+          dotnet run tools/version.cs -- --ci --run-number ${{ github.run_number }} \
+            | tee -a "$GITHUB_OUTPUT"
 ```
 
 ## References
@@ -97,3 +207,7 @@ dotnet kiota generate -l typescript -d api.json -c OlveTemplateApiClient -o clie
 - [Olve.Results](https://olivervea.github.io/Olve.Utilities/src/Olve.Results/README.html) — Functional result types for non-throwing error handling
 - [Olve.Validation](https://olivervea.github.io/Olve.Utilities/src/Olve.Validation/README.html) — Fluent input validation built on Olve.Results
 - [Olve.Utilities](https://olivervea.github.io/Olve.Utilities/src/Olve.Utilities/README.html) — Meta-package bundling utility libraries including identifiers, collections, and graph types
+- [TUnit](https://tunit.dev/docs/intro) — Test framework (not xUnit/NUnit). Uses `await Assert.That(...)` fluent syntax
+- [Rocks](https://raw.githubusercontent.com/JasonBock/Rocks/refs/heads/main/docs/Overview.md) — Source-generated mocking library for AOT-compatible test doubles
+- [Refitter](https://refitter.github.io/articles/refitter-file-format.html) — Source generator for typed C# HTTP clients from OpenAPI specs via Refit
+- [Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview) — Microsoft's OpenAPI client generator for TypeScript (and other languages)

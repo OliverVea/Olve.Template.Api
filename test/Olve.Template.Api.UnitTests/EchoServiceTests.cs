@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Olve.Results.TUnit;
 using Olve.Template.Api.Message;
 using Rocks;
 
@@ -19,7 +20,7 @@ public class MessageServiceTests
     {
         var result = _sut.Get();
 
-        await Assert.That(result.TryPickProblems(out _, out _)).IsTrue();
+        await Assert.That(result).Failed();
     }
 
     [Test]
@@ -27,8 +28,7 @@ public class MessageServiceTests
     {
         var result = _sut.Set("hello");
 
-        await Assert.That(result.TryPickValue(out var value, out _)).IsTrue();
-        await Assert.That(value).IsEqualTo("hello");
+        await Assert.That(result).SucceededAndValue(v => v.IsEqualTo("hello"));
     }
 
     [Test]
@@ -37,8 +37,7 @@ public class MessageServiceTests
         _sut.Set("hello");
         var result = _sut.Get();
 
-        await Assert.That(result.TryPickValue(out var value, out _)).IsTrue();
-        await Assert.That(value).IsEqualTo("hello");
+        await Assert.That(result).SucceededAndValue(v => v.IsEqualTo("hello"));
     }
 
     [Test]
@@ -46,7 +45,7 @@ public class MessageServiceTests
     {
         var result = _sut.Set(null);
 
-        await Assert.That(result.TryPickProblems(out _, out _)).IsTrue();
+        await Assert.That(result).Failed();
     }
 
     [Test]
@@ -54,7 +53,7 @@ public class MessageServiceTests
     {
         var result = _sut.Set("");
 
-        await Assert.That(result.TryPickProblems(out _, out _)).IsTrue();
+        await Assert.That(result).Failed();
     }
 
     [Test]
@@ -62,6 +61,6 @@ public class MessageServiceTests
     {
         var result = _sut.Set("   ");
 
-        await Assert.That(result.TryPickProblems(out _, out _)).IsTrue();
+        await Assert.That(result).Failed();
     }
 }

@@ -11,8 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="TUnit" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Olve.Results.TUnit" />
+    <PackageReference Include="TUnit" />
     <PackageReference Include="Refit" />
   </ItemGroup>
 
