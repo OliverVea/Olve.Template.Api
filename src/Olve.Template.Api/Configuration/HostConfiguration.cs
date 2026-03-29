@@ -11,7 +11,7 @@ public static class HostConfiguration
             .AddJsonFile("appsettings.json", optional: true)
             .AddJsonFile($"appsettings.{environment}.json", optional: true)
             .AddEnvironmentVariables()
-            .AddJsonFile("appsettings.local.json", optional: true)
+            .AddUserSecrets<Program>()
             .AddCommandLine(args);
 
         builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));

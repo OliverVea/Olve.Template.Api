@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Oliver Vea",
+  "classifications": [
+    "Web",
+    "API",
+    "Minimal API"
+  ],
+  "identity": "Olve.Template.Api",
+  "name": "Olve API Template",
+  "shortName": "olve-api",
+  "tags": {
+    "language": "C#",
+    "type": "solution"
+  },
+  "sourceName": "Olve.Template.Api",
+  "preferNameDirectory": true,
+  "symbols": {
+    "kebabName": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "kebabCase",
+      "replaces": "olve-template-api",
+      "fileRename": "olve-template-api"
+    }
+  },
+  "forms": {
+    "kebabCase": {
+      "identifier": "chain",
+      "steps": [
+        "dotToHyphen",
+        "lowerCaseIt"
+      ]
+    },
+    "dotToHyphen": {
+      "identifier": "replace",
+      "pattern": "\\.",
+      "replacement": "-"
+    },
+    "lowerCaseIt": {
+      "identifier": "lowerCase"
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "exclude": [
+            ".git/**",
+            ".claude/**",
+            ".template.config/**",
+            "TestResults/**",
+            "CLAUDE.md",
+            "CI.md"
+          ]
+        }
+      ]
+    }
+  ]
+}

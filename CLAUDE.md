@@ -34,8 +34,10 @@ test/Olve.Template.Api.UnitTests/               # Unit tests (TUnit)
 test/Olve.Template.Api.IntegrationTests/        # Integration tests (TUnit + WebApplicationFactory)
 clients/Olve.Template.Api.Client/               # Generated C# client (Refitter source gen)
 clients/olve-template-api-client-ts/            # Generated TypeScript client (Kiota)
-tools/version.cs                         # CalVer versioning script
-helm/olve-template-api/                         # Helm chart for Kubernetes
+tools/version.cs                                # CalVer versioning script
+helm/                                           # Helm chart for Kubernetes
+Directory.Build.props                           # Shared build properties (TFM, nullable, etc.)
+Directory.Packages.props                        # Central package version management
 ```
 
 ## Conventions
@@ -44,7 +46,8 @@ helm/olve-template-api/                         # Helm chart for Kubernetes
 - **Error handling**: [Olve.Results](https://olivervea.github.io/Olve.Utilities/src/Olve.Results/README.html) for non-throwing result types, [Olve.Validation](https://olivervea.github.io/Olve.Utilities/src/Olve.Validation/README.html) for input validation
 - **API patterns**: [Olve.MinimalApi](https://olivervea.github.io/Olve.Utilities/src/Olve.MinimalApi/README.html) for result mapping to HTTP responses
 - **Test framework**: [TUnit](https://tunit.dev/docs/) (not xUnit/NUnit). Tests use `await Assert.That(...)` fluent syntax.
-- **Package versions**: Use `Version="*"` (floating) in .csproj files
+- **Package versions**: Managed centrally in `Directory.Packages.props` — do not add `Version` attributes to `PackageReference` in csproj files
+- **Local config**: Use `dotnet user-secrets` for local overrides (not appsettings.local.json)
 - **Test execution**: MSBuild properties control which tests run:
   - `RunUnitTests=false` skips unit tests
   - `RunIntegrationTests=true` enables integration tests

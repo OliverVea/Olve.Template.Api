@@ -1,2 +1,0 @@
-- [Solution template goal](project_template_goal.md) — Project will become a personal dotnet new template with Olve packages baked in
-- [Olve.Results direction](project_olve_results_direction.md) — Plans for static mapper interface and client/server result specializations

@@ -1,16 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <IsTestProject Condition="'$(RunUnitTests)' == 'false'">false</IsTestProject>
     <IsTestingPlatformApplication Condition="'$(RunUnitTests)' == 'false'">false</IsTestingPlatformApplication>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Rocks" Version="*" />
-    <PackageReference Include="TUnit" Version="*" />
+    <PackageReference Include="Rocks" />
+    <PackageReference Include="TUnit" />
   </ItemGroup>
 
   <ItemGroup>

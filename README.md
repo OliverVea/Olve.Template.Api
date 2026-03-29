@@ -5,43 +5,51 @@ A .NET 10 minimal API service template.
 ## Project Structure
 
 ```
-├── src/Olve.Template.Api/                      # API application
-│   ├── Program.cs                       # Endpoints, configuration, logging
-│   ├── Echo/EchoService.cs              # Echo service
-│   ├── Dockerfile                       # Multi-stage build (aspnet chiseled)
-│   └── appsettings.json                 # Default configuration
-├── test/Olve.Template.Api.UnitTests/           # Unit tests (TUnit)
-├── test/Olve.Template.Api.IntegrationTests/    # Integration tests (TUnit + WebApplicationFactory)
-├── clients/Olve.Template.Api.Client/           # Generated C# HTTP client (Refitter)
-├── clients/olve-template-api-client-ts/        # Generated TypeScript HTTP client (Kiota)
-├── tools/version.cs                     # CalVer versioning script
-├── helm/olve-template-api/                     # Helm chart for Kubernetes
-├── api.json                             # OpenAPI spec (generated on build)
-└── compose.yaml                         # Docker Compose for local development
+├── src/Olve.Template.Api/                  # API application
+│   ├── Program.cs                          # Endpoints, configuration, logging
+│   ├── Configuration/                      # Auth, telemetry, JSON, host config
+│   ├── Message/                            # Message service (example feature)
+│   ├── Health/                             # Health check endpoints
+│   ├── Dockerfile                          # Multi-stage build (AOT, chiseled)
+│   └── appsettings.json                    # Default configuration
+├── test/Olve.Template.Api.UnitTests/       # Unit tests (TUnit)
+├── test/Olve.Template.Api.IntegrationTests/# Integration tests (TUnit + WebApplicationFactory)
+├── clients/Olve.Template.Api.Client/       # Generated C# HTTP client (Refitter)
+├── clients/olve-template-api-client-ts/    # Generated TypeScript HTTP client (Kiota)
+├── tools/version.cs                        # CalVer versioning script
+├── helm/                                   # Helm chart for Kubernetes
+├── Directory.Build.props                   # Shared build properties
+├── Directory.Packages.props                # Central package version management
+└── api.json                                # OpenAPI spec (generated on build)
 ```
 
 ## Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check, returns 200 |
-| GET | `/echo?message=` | Returns the message, 400 if empty |
-| GET | `/openapi/v1.json` | OpenAPI spec |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/health` | No | Health check, returns 200 |
+| GET | `/message` | No | Retrieve stored message |
+| POST | `/message?message=<text>` | Yes (JWT) | Store a message |
+| GET | `/openapi/v1.json` | No | OpenAPI spec |
 
 ## Configuration
 
 Sources in priority order (highest wins):
 
 1. CLI args (`--Port 9090`)
-2. `appsettings.local.json` (gitignored)
+2. User secrets (`dotnet user-secrets set "Key" "value"`)
 3. Environment variables
-4. `appsettings.json`
+4. `appsettings.{Environment}.json`
+5. `appsettings.json`
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `Host` | `localhost` | Listen address |
 | `Port` | `5000` | Listen port |
-| `Logging:LogLevel:Default` | `Information` | Default log level |
+| `Auth:Authority` | `https://auth.ovea.pro/...` | OIDC authority (Authentik) |
+| `Auth:Audience` | `olve-template-api` | JWT audience |
+| `Auth:SigningKey` | _(null)_ | Local HS256 key (bypasses OIDC, for dev) |
+| `OpenTelemetry:Endpoint` | `https://otel.ovea.pro` | OTLP endpoint (null = disabled) |
 
 ## Running
 
@@ -49,11 +57,8 @@ Sources in priority order (highest wins):
 # Local
 dotnet run --project src/Olve.Template.Api
 
-# Docker
-docker compose up --build
-
 # Kubernetes
-helm install olve-template-api helm/olve-template-api
+helm install olve-template-api helm/
 ```
 
 ## Testing
