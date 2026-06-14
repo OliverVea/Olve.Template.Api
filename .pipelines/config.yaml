@@ -1,0 +1,34 @@
+# In-repo CD pipeline for Olve.Pipelines (GitOps).
+#
+# This file is the single source of truth for how this app is built and deployed.
+# Bind a pipeline to this repo and the service reconciles the live pipeline to
+# match this file on every change; pushing a commit deploys automatically (the
+# deploy poll is configured by the binding — no trigger needs declaring here).
+#
+# Secrets are declared by NAME only; their values live in the pipeline's own k8s
+# secret and never in the repo. Steps reference them as ordinary env vars
+# ($GITHUB_TOKEN, $SSH_PRIVATE_KEY) — they are mounted into every job.
+apiVersion: "0.0"
+name: olve-template-api
+description: Build with Kaniko, deploy to the homelab with Helm.
+version: "1"
+
+secrets:
+  - name: GITHUB_TOKEN
+    description: GitHub read token used to fetch the repo tarball during build.
+  - name: SSH_PRIVATE_KEY
+    description: SSH key for importing the image and running helm on the homelab host.
+
+# Production steps run in parallel and write to bundle/<step-name>/.
+productionSteps:
+  - name: build-and-package
+    configuration:
+      image: gcr.io/kaniko-project/executor:debug
+      scriptFile: scripts/build.sh
+
+# Processing steps run sequentially (order = list position), each receiving the bundle.
+processingSteps:
+  - name: deploy
+    configuration:
+      image: alpine:latest
+      scriptFile: scripts/deploy.sh
