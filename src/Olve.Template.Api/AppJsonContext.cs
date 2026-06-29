@@ -1,9 +1,22 @@
 using System.Text.Json.Serialization;
 using Olve.Results;
+using Olve.Template.Api.Messages;
+using Olve.Utilities.Ids;
+using Olve.Utilities.Paginations;
 
 namespace Olve.Template.Api;
 
-[JsonSerializable(typeof(string))]
-[JsonSerializable(typeof(Result<string>))]
+// Source-generated JSON for AOT. Id<Message> is registered explicitly so its closed generic is
+// statically reachable here (the Id<T> converter is reflection-based — see docs/DESIGN.md §1.4a).
 [JsonSerializable(typeof(ResultProblem[]))]
+[JsonSerializable(typeof(Message))]
+[JsonSerializable(typeof(IReadOnlyList<Message>))]
+[JsonSerializable(typeof(Page<Message>))]
+[JsonSerializable(typeof(MessageRequest))]
+[JsonSerializable(typeof(Id<Message>))]
+// The Result<T> wrappers are the endpoint delegates' declared return types, which OpenAPI
+// introspects at build time even though the result filter unwraps them at runtime.
+[JsonSerializable(typeof(Result))]
+[JsonSerializable(typeof(Result<Message>))]
+[JsonSerializable(typeof(Result<Page<Message>>))]
 internal partial class AppJsonContext : JsonSerializerContext;
