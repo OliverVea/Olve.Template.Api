@@ -103,6 +103,40 @@ dotnet run --project src/Olve.Template.Api
 helm install olve-template-api helm/
 ```
 
+## Deployment (GitOps)
+
+This template ships a `.pipelines/` directory, which makes it deploy out of the box via
+[**Olve.Pipelines**](https://github.com/OliverVea/Olve.Pipelines) — Oliver's lightweight GitOps CD
+service. `.pipelines/config.yaml` is the **single source of truth** for how the app is built and
+deployed (the deploy equivalent of `.github/workflows/`): once a pipeline is bound to the repo, the
+controller reconciles it to this file and **pushing to `main` redeploys automatically**.
+
+The pipeline shape:
+
+- **Production steps run in parallel** — `build-and-package` (Kaniko build → image tar + Helm chart)
+  and `code-test` (the unit suite). A test failure fails the group and **gates the deploy** (nothing
+  ships).
+- **Processing steps run sequentially** — `deploy-beta` (namespace `apps-beta`) → `deploy`
+  (namespace `apps`). **Beta gates prod**: if the beta rollout or its post-deploy health check fails,
+  prod never deploys.
+- **Secrets are by name only** (`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`); their values live in the
+  pipeline's own k8s secret, never in the repo.
+- The step scripts source a shared [`olve-lib.sh`](https://github.com/OliverVea/Olve.Pipelines/blob/main/.pipelines/scripts/olve-lib.sh)
+  (Kaniko/SSH/Helm footgun helpers) and only parameterize app-specifics, so they stay tiny. They
+  fetch it from `main`; swap that for a tag/SHA to pin.
+
+**Homelab conformance.** The Helm chart renders a **`ClusterIP` Service only — no Ingress**
+([`Olve.Homelab`](https://github.com/OliverVea/Olve.Homelab) is the edge chart that owns all Ingress).
+To expose the app publicly, add its host + service to the edge chart's `apps[]` / `apps-beta[]` list —
+**not** to this chart. The `deploy-beta` health-gate probes `https://<app>-beta.ovea.pro/health`, so
+that beta host must be registered in the edge chart before the gate can pass.
+
+Inspect runs, jobs, and logs with the `pl` CLI or the controller API. The
+[`ovea-olve-pipelines`](https://github.com/OliverVea/Olve.Pipelines) skill and the instance's `/docs`
+(served at [`pipelines-private.ovea.pro`](https://pipelines-private.ovea.pro), beta at
+`pipelines-beta.ovea.pro`) are the authoritative reference for the config schema, promotion gates, and
+the deploy model — start there rather than re-deriving it.
+
 ## Configuration
 
 Sources in priority order (highest wins):
@@ -245,7 +279,19 @@ jobs:
             | tee -a "$GITHUB_OUTPUT"
 ```
 
-## References
+## Architecture & References
+
+Each major component, what it does in the template, and the full set of links (docs, source,
+running instance/tooling, and the Claude Code skill that knows the model).
+
+| Component | Role in the template | Docs | GitHub | Instance / tooling | Skill |
+|---|---|---|---|---|---|
+| **Olve.Utilities** stack (Results, Validation, MinimalApi, Utilities) | Baked-in error handling, validation, result→HTTP mapping, `Id<T>`/`EntityStore<T>` primitives | [docs site](https://olivervea.github.io/Olve.Utilities/) | [OliverVea/Olve.Utilities](https://github.com/OliverVea/Olve.Utilities) | NuGet | *(none yet — gap)* |
+| **Olve.Pipelines** | GitOps CD — builds & deploys this repo via `.pipelines/` (see [Deployment](#deployment-gitops)) | in-repo `docs/setup/`, served at `/docs` + `llms.txt` | [OliverVea/Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines) | [`pipelines-private.ovea.pro`](https://pipelines-private.ovea.pro), beta `pipelines-beta.ovea.pro`, hooks `pipelines-hooks.ovea.pro`; **`pl` CLI** via `GET /download/{asset}` | `ovea-olve-pipelines` |
+| **Olve.Homelab** | Edge chart that owns all Ingress; public exposure is registered there, not in this chart | — | [OliverVea/Olve.Homelab](https://github.com/OliverVea/Olve.Homelab) | — | — |
+| **TUnit · Rocks · Refitter · Kiota** | Test framework, AOT mocking, C# & TS client generation | see per-library links below | — | — | — |
+
+Per-library documentation:
 
 - [Olve.MinimalApi](https://olivervea.github.io/Olve.Utilities/src/Olve.MinimalApi/README.html) — Minimal API extensions for result mapping, validation, and JSON conversion
 - [Olve.Results](https://olivervea.github.io/Olve.Utilities/src/Olve.Results/README.html) — Functional result types for non-throwing error handling
