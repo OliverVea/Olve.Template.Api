@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 # Generated API clients
 clients/
+
+# Local persistence snapshots (Storage:Mode=Persistent)
+data/
