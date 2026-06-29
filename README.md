@@ -20,14 +20,15 @@ src/Olve.Template.Api/                          # API application (minimal API)
 ├── Messages/                                   # Message CRUD example feature
 ├── Stores/                                     # EntityStore snapshot persistence (promotion-shaped)
 ├── Health/                                     # Health check endpoints
-├── Dockerfile                                  # Multi-stage build (AOT, chiseled)
 └── appsettings.json                            # Default configuration
 test/Olve.Template.Api.UnitTests/               # Unit tests (TUnit + Rocks)
 test/Olve.Template.Api.IntegrationTests/        # Integration tests (TUnit + Testcontainers)
 clients/Olve.Template.Api.Client/               # Generated C# client (Refitter CLI + Refit)
 clients/olve-template-api-client-ts/            # Generated TypeScript client (Kiota)
 tools/version.cs                                # CalVer versioning script
-helm/                                           # Helm chart for Kubernetes
+helm/                                           # Helm chart for Kubernetes (ClusterIP Service + SLO)
+.pipelines/                                     # Olve.Pipelines CD config (build, test, deploy beta→prod)
+Dockerfile                                      # Multi-stage build (AOT, chiseled)
 Directory.Build.props                           # Shared build properties (TFM, nullable, etc.)
 Directory.Packages.props                        # Central package version management
 ```

@@ -25,7 +25,7 @@ public class AppFixture : IAsyncInitializer, IAsyncDisposable
     {
         var image = new ImageFromDockerfileBuilder()
             .WithDockerfileDirectory(CommonDirectoryPath.GetSolutionDirectory(), string.Empty)
-            .WithDockerfile("src/Olve.Template.Api/Dockerfile")
+            .WithDockerfile("Dockerfile")
             .Build();
 
         await image.CreateAsync();

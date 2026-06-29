@@ -1,0 +1,12 @@
+# Beta overlay, applied on top of values.yaml by deploy-beta.sh (`-f values-beta.yaml`).
+# Only the values that differ from prod for the apps-beta deploy. Beta points at the
+# beta Authentik + OTel endpoints; everything else (image, service, resources, slo,
+# secrets) is inherited from values.yaml. slo.enabled=false is passed via --set in
+# deploy-beta.sh (the sloth CRD is not installed cluster-wide yet), not here.
+config:
+  Auth__Authority: "https://auth-beta.ovea.pro/application/o/olve-template-api/"
+  Auth__Audience: "olve-template-api-beta"
+  OpenTelemetry__Endpoint: "http://otel-beta.ovea.pro"
+  OpenTelemetry__Protocol: "http"
+  OpenTelemetry__OAuth2__TokenUrl: "https://auth-beta.ovea.pro/application/o/token/"
+  OpenTelemetry__OAuth2__ClientId: "otel"

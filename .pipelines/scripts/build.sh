@@ -1,33 +1,29 @@
 #!/bin/sh
 # Build the app image with Kaniko and stage the deploy artifacts (image tar, helm
-# chart, version) into /output so the deploy step can pick them up from the bundle.
+# chart, version) into /output so the deploy steps can pick them up from the bundle.
+# The Kaniko/staging footguns live in olve-lib.sh (shared across all Olve.Pipelines apps).
 set -e
+
+# Fetch the shared helper library. Fetch-to-file, not `. <(...)`: busybox has no
+# process substitution. --no-check-certificate: same busybox-wget TLS footgun as the
+# repo fetch. Swap `main` for a tag/SHA to pin.
+# mkdir -p /tmp: the kaniko:debug rootfs has no /tmp, so wget -O /tmp/... fails ENOENT.
+mkdir -p /tmp
+wget --no-check-certificate -qO /tmp/olve-lib.sh \
+  https://raw.githubusercontent.com/OliverVea/Olve.Pipelines/main/.pipelines/scripts/olve-lib.sh
+. /tmp/olve-lib.sh
 
 REPO=OliverVea/Olve.Template.Api
 BRANCH=main
-VERSION=$(date +%Y%m%d-%H%M%S)
-
+VERSION=$(olve_version)
 CTX=/kaniko/build-context
-mkdir -p "$CTX"
-cd "$CTX"
 
-# Fetch the repo tarball. The Kaniko debug image ships busybox wget, which needs
-# --no-check-certificate against the GitHub API.
-wget --no-check-certificate -q --header="Authorization: token $GITHUB_TOKEN" \
-  -O repo.tar.gz "https://api.github.com/repos/$REPO/tarball/$BRANCH"
-tar xzf repo.tar.gz --strip-components=1
-rm repo.tar.gz
+olve_fetch_repo "$REPO" "$BRANCH" "$CTX"
 
-# Carry the helm chart and version forward as build artifacts.
-cp -r "$CTX/helm" /output/helm
+# Carry the helm chart and version forward as build artifacts before Kaniko runs.
+olve_stage_artifact "$CTX/helm" /output/helm
 echo "$VERSION" > /output/version.txt
 
-# Build to a tar (no registry); the deploy step imports it onto the host.
-/kaniko/executor \
-  --context="$CTX" \
-  --dockerfile="$CTX/src/Olve.Template.Api/Dockerfile" \
-  --no-push \
-  --tar-path=/output/image.tar \
-  --destination="olve-template-api:$VERSION"
+olve_kaniko_build "$CTX" "olve-template-api:$VERSION"
 
 echo "Build complete: olve-template-api:$VERSION"
