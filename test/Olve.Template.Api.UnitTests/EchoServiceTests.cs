@@ -34,7 +34,7 @@ public class MessageServiceTests
     [Test]
     public async Task Set_ThenGet_ReturnsSetMessage()
     {
-        _sut.Set("hello");
+        _ = _sut.Set("hello");
         var result = _sut.Get();
 
         await Assert.That(result).SucceededAndValue(v => v.IsEqualTo("hello"));

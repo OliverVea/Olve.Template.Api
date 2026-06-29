@@ -49,8 +49,7 @@
             ".git/**",
             ".claude/**",
             ".template.config/**",
-            "TestResults/**",
-            "CLAUDE.md"
+            "TestResults/**"
           ]
         }
       ]

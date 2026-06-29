@@ -57,7 +57,41 @@ dotnet test -p:RunIntegrationTests=true -p:RunUnitTests=false
 dotnet test -p:RunIntegrationTests=true
 ```
 
-Integration tests use `WebApplicationFactory` — no Docker required.
+Integration tests use `WebApplicationFactory` with [Testcontainers](https://dotnet.testcontainers.org/) for external dependencies. The `AppFixture` class manages the test server and container lifecycle via TUnit's `ClassDataSource` pattern.
+
+To add a dependency (e.g. PostgreSQL):
+
+1. Add the Testcontainers module to `Directory.Packages.props` and the integration test project:
+   ```xml
+   <!-- Directory.Packages.props -->
+   <PackageVersion Include="Testcontainers.PostgreSql" Version="4.11.0" />
+
+   <!-- Integration test .csproj -->
+   <PackageReference Include="Testcontainers.PostgreSql" />
+   ```
+
+2. Update `AppFixture` to start the container and wire the connection string:
+   ```csharp
+   private readonly PostgreSqlContainer _pg = new PostgreSqlBuilder().Build();
+
+   public async Task InitializeAsync()
+   {
+       await _pg.StartAsync();
+
+       _factory = new WebApplicationFactory<Program>()
+           .WithWebHostBuilder(builder =>
+           {
+               // ... existing config ...
+               builder.UseSetting("ConnectionStrings:Default", _pg.GetConnectionString());
+           });
+   }
+
+   public async ValueTask DisposeAsync()
+   {
+       await _factory.DisposeAsync();
+       await _pg.DisposeAsync();
+   }
+   ```
 
 Test execution is controlled by MSBuild properties:
 - `RunUnitTests=false` skips unit tests
@@ -96,7 +130,7 @@ Sources in priority order (highest wins):
 
 ### C# ([Refitter](https://refitter.github.io/))
 
-The `clients/Olve.Template.Api.Client/` project uses the [Refitter source generator](https://www.nuget.org/packages/Refitter.SourceGenerator) to produce a typed [Refit](https://github.com/reactiveui/refit) interface from `api.json` at build time. Just build the solution — no manual codegen step needed.
+The `clients/Olve.Template.Api.Client/` project generates a typed [Refit](https://github.com/reactiveui/refit) client from `api.json` at build time — just build the solution, no manual codegen step needed. A build target runs the [Refitter](https://refitter.github.io/) CLI (restored via `dotnet tool restore`) to emit the interface as `Generated/Output.cs`, which Refit's own source generator then turns into the client implementation. (Refit 12's `RestService.For<T>` requires that generated implementation, and Refit's generator can only consume a real source file — not the output of Refitter's source generator — hence the CLI step rather than `Refitter.SourceGenerator`.)
 
 ### TypeScript ([Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview))
 

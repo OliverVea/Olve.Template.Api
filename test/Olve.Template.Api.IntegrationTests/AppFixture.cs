@@ -1,58 +1,80 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.AspNetCore.Mvc.Testing;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Olve.Template.Api.Client;
 using Refit;
+using TUnit.Core.Interfaces;
 
 namespace Olve.Template.Api.IntegrationTests;
 
-public class AppFixture : IAsyncDisposable
+public class AppFixture : IAsyncInitializer, IAsyncDisposable
 {
     private const string SigningKey = "integration-test-signing-key-that-is-long-enough";
     private const string Issuer = "integration-test";
     private const string Audience = "integration-test";
+    private const int ContainerPort = 5000;
 
-    private readonly WebApplicationFactory<Program> _factory;
+    private IContainer _container = null!;
+    private string _baseUrl = null!;
 
-    public AppFixture()
+    public async Task InitializeAsync()
     {
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseSetting("Auth:Authority", Issuer);
-                builder.UseSetting("Auth:Audience", Audience);
-                builder.UseSetting("Auth:SigningKey", SigningKey);
-            });
+        var image = new ImageFromDockerfileBuilder()
+            .WithDockerfileDirectory(CommonDirectoryPath.GetSolutionDirectory(), string.Empty)
+            .WithDockerfile("src/Olve.Template.Api/Dockerfile")
+            .Build();
+
+        await image.CreateAsync();
+
+        _container = new ContainerBuilder(image)
+            .WithPortBinding(ContainerPort, assignRandomHostPort: true)
+            .WithEnvironment("Auth__SigningKey", SigningKey)
+            .WithEnvironment("Auth__Authority", Issuer)
+            .WithEnvironment("Auth__Audience", Audience)
+            .WithEnvironment("Host", "0.0.0.0")
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPort(ContainerPort).ForPath("/health")))
+            .Build();
+
+        await _container.StartAsync();
+
+        var hostPort = _container.GetMappedPublicPort(ContainerPort);
+        _baseUrl = $"http://localhost:{hostPort}";
     }
 
     public IOlveTemplateApiv1 CreateApiClient()
     {
-        var client = _factory.CreateClient();
+        var client = new HttpClient { BaseAddress = new Uri(_baseUrl) };
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", GenerateJwt());
         return RestService.For<IOlveTemplateApiv1>(client);
     }
 
     public HttpClient CreateUnauthenticatedHttpClient() =>
-        _factory.CreateClient();
+        new() { BaseAddress = new Uri(_baseUrl) };
 
-    public ValueTask DisposeAsync() => _factory.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        await _container.DisposeAsync();
+    }
 
     private static string GenerateJwt()
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var token = new JwtSecurityToken(
-            issuer: Issuer,
-            audience: Audience,
-            claims: [new Claim(ClaimTypes.Name, "test-user")],
-            expires: DateTime.UtcNow.AddMinutes(5),
-            signingCredentials: credentials);
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = Issuer,
+            Audience = Audience,
+            Expires = DateTime.UtcNow.AddMinutes(5),
+            SigningCredentials = credentials,
+            Subject = new ClaimsIdentity([new Claim(ClaimTypes.Name, "test-user")]),
+        };
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return new JsonWebTokenHandler().CreateToken(descriptor);
     }
 }
