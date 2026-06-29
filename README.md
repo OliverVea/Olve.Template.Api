@@ -17,13 +17,14 @@ dotnet new olve-api -n "MyCompany.MyService"
 ```
 src/Olve.Template.Api/                          # API application (minimal API)
 ├── Configuration/                              # Auth, telemetry, JSON, host config
-├── Message/                                    # Message service (example feature)
+├── Messages/                                   # Message CRUD example feature
+├── Stores/                                     # EntityStore snapshot persistence (promotion-shaped)
 ├── Health/                                     # Health check endpoints
 ├── Dockerfile                                  # Multi-stage build (AOT, chiseled)
 └── appsettings.json                            # Default configuration
 test/Olve.Template.Api.UnitTests/               # Unit tests (TUnit + Rocks)
-test/Olve.Template.Api.IntegrationTests/        # Integration tests (TUnit + WebApplicationFactory)
-clients/Olve.Template.Api.Client/               # Generated C# client (Refitter source gen)
+test/Olve.Template.Api.IntegrationTests/        # Integration tests (TUnit + Testcontainers)
+clients/Olve.Template.Api.Client/               # Generated C# client (Refitter CLI + Refit)
 clients/olve-template-api-client-ts/            # Generated TypeScript client (Kiota)
 tools/version.cs                                # CalVer versioning script
 helm/                                           # Helm chart for Kubernetes
@@ -36,9 +37,15 @@ Directory.Packages.props                        # Central package version manage
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/health` | No | Health check, returns 200 |
-| GET | `/message` | No | Retrieve stored message |
-| POST | `/message?message=<text>` | Yes (JWT) | Store a message |
+| GET | `/messages?page=<n>&pageSize=<n>` | No | List messages (paginated, 1-based) |
+| POST | `/messages` | Yes (JWT) | Create a message (`{ "text": "…" }`) |
+| PUT | `/messages/{id}` | Yes (JWT) | Update a message (`{ "text": "…" }`) |
+| DELETE | `/messages/{id}` | Yes (JWT) | Delete a message |
 | GET | `/openapi/v1.json` | No | OpenAPI spec |
+
+The `Messages` feature is the template's worked example — it exercises `Id<T>`, an
+`EntityStore<Message>`, `Page<T>` pagination, the `IHandler` + `.WithValidation(...)` pattern, and
+`IAsyncOnStartup` wiring (a welcome message is seeded on first run).
 
 ## Build & Test
 
@@ -57,7 +64,7 @@ dotnet test -p:RunIntegrationTests=true -p:RunUnitTests=false
 dotnet test -p:RunIntegrationTests=true
 ```
 
-Integration tests use `WebApplicationFactory` with [Testcontainers](https://dotnet.testcontainers.org/) for external dependencies. The `AppFixture` class manages the test server and container lifecycle via TUnit's `ClassDataSource` pattern.
+Integration tests run the real service via [Testcontainers](https://dotnet.testcontainers.org/): `AppFixture` builds the `Dockerfile` image, starts a container (waiting on `/health`), and exercises it through the generated Refit client — so the tests cover the AOT-published binary end to end, including JSON serialization. The fixture lifecycle is managed via TUnit's `IAsyncInitializer` + `ClassDataSource` pattern.
 
 To add a dependency (e.g. PostgreSQL):
 
@@ -70,27 +77,15 @@ To add a dependency (e.g. PostgreSQL):
    <PackageReference Include="Testcontainers.PostgreSql" />
    ```
 
-2. Update `AppFixture` to start the container and wire the connection string:
+2. In `AppFixture.InitializeAsync`, start the dependency container and pass its connection string to the
+   app container as an environment variable (config keys map to `__`-delimited env vars):
    ```csharp
    private readonly PostgreSqlContainer _pg = new PostgreSqlBuilder().Build();
 
-   public async Task InitializeAsync()
-   {
-       await _pg.StartAsync();
-
-       _factory = new WebApplicationFactory<Program>()
-           .WithWebHostBuilder(builder =>
-           {
-               // ... existing config ...
-               builder.UseSetting("ConnectionStrings:Default", _pg.GetConnectionString());
-           });
-   }
-
-   public async ValueTask DisposeAsync()
-   {
-       await _factory.DisposeAsync();
-       await _pg.DisposeAsync();
-   }
+   // in InitializeAsync, before building the app container:
+   await _pg.StartAsync();
+   // ...
+   .WithEnvironment("ConnectionStrings__Default", _pg.GetConnectionString())
    ```
 
 Test execution is controlled by MSBuild properties:
@@ -125,6 +120,20 @@ Sources in priority order (highest wins):
 | `Auth:Audience` | `olve-template-api` | JWT audience |
 | `Auth:SigningKey` | _(null)_ | Local HS256 key (bypasses OIDC, for dev) |
 | `OpenTelemetry:Endpoint` | `https://otel.ovea.pro` | OTLP endpoint (null = disabled) |
+| `Storage:Mode` | `Ephemeral` | `Ephemeral` (in-memory) or `Persistent` (snapshot to disk) |
+| `Storage:Directory` | `data` | Directory for `Persistent` snapshots |
+
+### Persistence
+
+The `Messages` feature is backed by an in-memory `EntityStore<Message>`. By default storage is
+`Ephemeral` (state is lost on restart). Set `Storage:Mode=Persistent` to have the store load on
+startup and save a debounced whole-snapshot JSON to `Storage:Directory` via the BCL-only
+`FileSnapshotStore` — both wired in `Messages/MessageEndpoints.cs`.
+
+Everything sits behind the `ISnapshotStore` seam (`Stores/`), so the persistence ladder — in-memory →
+file → S3/MinIO → relational — is a one-line swap at registration without touching the store or
+handlers. The `Stores/` module is written at library quality for later promotion to
+`Olve.Utilities.Hosting`.
 
 ## Client Generation
 
