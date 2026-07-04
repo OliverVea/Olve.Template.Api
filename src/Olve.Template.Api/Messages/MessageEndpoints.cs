@@ -45,7 +45,7 @@ public static class MessageEndpoints
             mode: mode);
     }
 
-    public static void MapMessageEndpoints(this WebApplication app)
+    public static void MapMessageEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/messages", (EntityStore<Message> store, int page = 1, int pageSize = DefaultPageSize) =>
             {

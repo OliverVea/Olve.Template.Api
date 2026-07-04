@@ -38,12 +38,16 @@ Directory.Packages.props                        # Central package version manage
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
+| GET | `/` | No | The SPA (`frontend/`), served from `wwwroot` — see [Frontend](#frontend) |
 | GET | `/health` | No | Health check, returns 200 |
-| GET | `/messages?page=<n>&pageSize=<n>` | No | List messages (paginated, 1-based) |
-| POST | `/messages` | Yes (JWT) | Create a message (`{ "text": "…" }`) |
-| PUT | `/messages/{id}` | Yes (JWT) | Update a message (`{ "text": "…" }`) |
-| DELETE | `/messages/{id}` | Yes (JWT) | Delete a message |
+| GET | `/api/messages?page=<n>&pageSize=<n>` | No | List messages (paginated, 1-based) |
+| POST | `/api/messages` | Yes (JWT) | Create a message (`{ "text": "…" }`) |
+| PUT | `/api/messages/{id}` | Yes (JWT) | Update a message (`{ "text": "…" }`) |
+| DELETE | `/api/messages/{id}` | Yes (JWT) | Delete a message |
 | GET | `/openapi/v1.json` | No | OpenAPI spec |
+
+The JSON API lives under `/api/` so the SPA can own the site root; `/health` stays at the root
+for Kubernetes probes. Unmatched non-API GETs fall back to `index.html` for SPA client routing.
 
 The `Messages` feature is the template's worked example — it exercises `Id<T>`, an
 `EntityStore<Message>`, `Page<T>` pagination, the `IHandler` + `.WithValidation(...)` pattern, and
@@ -213,8 +217,12 @@ The stance is deliberate (DESIGN §2): standalone custom elements, ES modules, a
 re-rendering**. A component that outgrows this can `npm i lit` and switch its own base to
 `LitElement` per-component; auto-rerender is always opt-in, never the baseline.
 
+It's served **same-origin**: the Dockerfile's Node stage builds `frontend/dist` into the app's
+`wwwroot`, so the deployed API serves the SPA at `/` and the JSON API at `/api/` (one host, no
+CORS). Locally you run it on Vite instead, which proxies `/api` to the backend:
+
 ```bash
-cd frontend && npm install && npm run dev    # proxies /messages to the API (VITE_API_TARGET)
+cd frontend && npm install && npm run dev    # proxies /api to the API (VITE_API_TARGET)
 ```
 
 See [`frontend/README.md`](frontend/README.md) for the layout, run/build commands, auth for

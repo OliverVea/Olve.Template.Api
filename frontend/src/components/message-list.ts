@@ -46,7 +46,7 @@ export class MessageList extends BaseElement {
     this.#error = "";
     this.render();
     try {
-      const page = await this.#client.messages.get({
+      const page = await this.#client.api.messages.get({
         queryParameters: { page: String(this.#page), pageSize: String(this.#pageSize) },
       });
       this.#messages = page?.items ?? [];
@@ -63,7 +63,7 @@ export class MessageList extends BaseElement {
   async create(text: string): Promise<void> {
     if (!this.#client || !text.trim()) return;
     try {
-      await this.#client.messages.post({ text });
+      await this.#client.api.messages.post({ text });
       this.#page = 1;
       await this.load();
     } catch (error) {
@@ -75,7 +75,7 @@ export class MessageList extends BaseElement {
   async saveEdit(id: string, text: string): Promise<void> {
     if (!this.#client || !text.trim()) return;
     try {
-      await this.#client.messages.byId(id).put({ text });
+      await this.#client.api.messages.byId(id).put({ text });
       this.#editingId = null;
       await this.load();
     } catch (error) {
@@ -87,7 +87,7 @@ export class MessageList extends BaseElement {
   async deleteMessage(id: string): Promise<void> {
     if (!this.#client) return;
     try {
-      await this.#client.messages.byId(id).delete();
+      await this.#client.api.messages.byId(id).delete();
       await this.load();
     } catch (error) {
       this.#error = describeError(error);

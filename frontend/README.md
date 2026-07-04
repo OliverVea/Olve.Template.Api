@@ -41,7 +41,8 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-The dev server proxies `/messages` and `/health` to the backend. Point it at a running API:
+The dev server proxies `/api` to the backend (the Kiota client calls `/api/messages`). Point it
+at a running API:
 
 ```bash
 # against the beta pod (port-forward), matching the default proxy target:
@@ -64,8 +65,13 @@ npm run build      # tsc --noEmit (type-check) + vite build → dist/
 npm run preview    # serve the built bundle
 ```
 
-For a production bundle deployed on a different host than the API, set the base URL at build
-time: `VITE_API_BASE_URL=https://api.example.com npm run build` (defaults to same-origin).
+By default this template is **served same-origin**: the [root `Dockerfile`](../Dockerfile) has a
+Node stage that runs this build and copies `dist/` into the API's `wwwroot`, so the deployed
+backend serves the SPA at `/` and the JSON API at `/api/` (`GET /api/messages` is anonymous). No
+base URL needed — the client uses same-origin.
+
+To instead deploy the bundle on a *different* host than the API, set the base URL at build time:
+`VITE_API_BASE_URL=https://api.example.com npm run build`.
 
 ## Test
 

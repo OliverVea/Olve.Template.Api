@@ -489,6 +489,12 @@ client-gen → component → API loop end-to-end.
 - ~~TypeScript vs. plain JS for the vanilla baseline?~~ **Resolved: vanilla TypeScript**
   (Vite build), overriding the plain-JS recommendation below — chosen so the Kiota client is
   consumed with full types. The litify-later and no-auto-rerender stances are unchanged.
+- ~~Where does the SPA get served?~~ **Resolved: same-origin from the API.** The Dockerfile
+  builds `frontend/dist` into the app's `wwwroot`; the API serves the SPA at `/` (with an
+  `index.html` fallback for client routing) and moves its own JSON endpoints under **`/api/`**
+  (`/health` stays at the root for probes). One host, no CORS, no second deployment. A headless
+  service drops the frontend by deleting `frontend/`, the Dockerfile's Node stage, and the
+  `wwwroot` copy.
 
   *(Original recommendation, kept for the record: plain JS baseline, TS available as opt-in,
   to honor "no build step required." QuestionBank uses TS; "no build step" pushed toward JS +

@@ -23,7 +23,7 @@ public class MessageTests(AppFixture fixture)
     {
         var client = fixture.CreateUnauthenticatedHttpClient();
 
-        var response = await client.PostAsync("/messages", new StringContent("{}", Encoding.UTF8, "application/json"));
+        var response = await client.PostAsync("/api/messages", new StringContent("{}", Encoding.UTF8, "application/json"));
 
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
     }

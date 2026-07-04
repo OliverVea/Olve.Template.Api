@@ -3,7 +3,7 @@ import type { OlveTemplateApiClient } from "../api/olveTemplateApiClient.js";
 import { MessageList } from "./message-list.js";
 
 /**
- * A minimal fake of the Kiota client — MessageList only touches `messages.get/post/byId`,
+ * A minimal fake of the Kiota client — MessageList only touches `api.messages.get/post/byId`,
  * so we stub exactly those and cast. `totalCount` is an `UntypedNode`-like `{ getValue }`.
  */
 function fakeClient(overrides: {
@@ -14,21 +14,20 @@ function fakeClient(overrides: {
 }) {
   const put = vi.fn(overrides.put ?? (async () => ({})));
   const del = vi.fn(overrides.del ?? (async () => new ArrayBuffer(0)));
-  const client = {
-    messages: {
-      get: vi.fn(
-        overrides.get ?? (async () => ({ items: [], totalCount: node(0), hasNextPage: false })),
-      ),
-      post: vi.fn(overrides.post ?? (async () => ({}))),
-      byId: vi.fn(() => ({ put, delete: del })),
-    },
+  const messages = {
+    get: vi.fn(
+      overrides.get ?? (async () => ({ items: [], totalCount: node(0), hasNextPage: false })),
+    ),
+    post: vi.fn(overrides.post ?? (async () => ({}))),
+    byId: vi.fn(() => ({ put, delete: del })),
   };
+  const client = { api: { messages } };
   return {
     client: client as unknown as OlveTemplateApiClient,
     spies: {
-      get: client.messages.get,
-      post: client.messages.post,
-      byId: client.messages.byId,
+      get: messages.get,
+      post: messages.post,
+      byId: messages.byId,
       put,
       del,
     },

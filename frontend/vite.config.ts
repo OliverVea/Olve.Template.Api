@@ -13,9 +13,9 @@ export default defineConfig(() => {
   const target = process.env.VITE_API_TARGET ?? "http://localhost:18080";
   return {
     server: {
+      // The SPA calls the API under /api (same-origin); Vite forwards that to the backend.
       proxy: {
-        "/messages": { target, changeOrigin: true },
-        "/health": { target, changeOrigin: true },
+        "/api": { target, changeOrigin: true },
       },
     },
     // Unit tests are opt-in (`npm test`) and live next to the source they cover
