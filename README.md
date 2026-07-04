@@ -25,6 +25,7 @@ test/Olve.Template.Api.UnitTests/               # Unit tests (TUnit + Rocks)
 test/Olve.Template.Api.IntegrationTests/        # Integration tests (TUnit + Testcontainers)
 clients/Olve.Template.Api.Client/               # Generated C# client (Refitter CLI + Refit)
 clients/olve-template-api-client-ts/            # Generated TypeScript client (Kiota)
+frontend/                                       # Vanilla Web Components + TS frontend (see frontend/README.md)
 tools/version.cs                                # CalVer versioning script
 helm/                                           # Helm chart for Kubernetes (ClusterIP Service + SLO)
 .pipelines/                                     # Olve.Pipelines CD config (build, test, deploy beta→prod)
@@ -199,6 +200,25 @@ The `clients/Olve.Template.Api.Client/` project generates a typed [Refit](https:
 dotnet tool restore
 dotnet kiota generate -l typescript -d api.json -c OlveTemplateApiClient -o clients/olve-template-api-client-ts/src -n OlveTemplateApi
 ```
+
+## Frontend
+
+`frontend/` is the template's companion UI: a no-framework, **vanilla Web Components** app in
+**TypeScript**, consuming the API through its own Kiota-generated client. It ships a
+`<message-list>` CRUD view over the backend `Message` feature, proving the client-gen →
+component → API loop end to end.
+
+The stance is deliberate (DESIGN §2): standalone custom elements, ES modules, and a shared
+`BaseElement` that provides ergonomics only — **explicit `render()`, no automatic
+re-rendering**. A component that outgrows this can `npm i lit` and switch its own base to
+`LitElement` per-component; auto-rerender is always opt-in, never the baseline.
+
+```bash
+cd frontend && npm install && npm run dev    # proxies /messages to the API (VITE_API_TARGET)
+```
+
+See [`frontend/README.md`](frontend/README.md) for the layout, run/build commands, auth for
+writes, and how to regenerate the client (including the Kiota-runtime version pin).
 
 ## Versioning
 

@@ -42,6 +42,18 @@ productionSteps:
     configuration:
       image: mcr.microsoft.com/dotnet/sdk:10.0-noble
       scriptFile: scripts/test.sh
+  # --- frontend gate (DELETE-WITH-THE-FRONTEND) -------------------------------------------
+  # Lints (Biome), unit-tests (Vitest) and production-builds the SPA in frontend/, in
+  # parallel with the build and .NET tests. A failure fails the production group and gates
+  # the deploy cascade. Runs on a Node image because the dotnet SDK image above has no Node.
+  # This step + scripts/frontend-check.sh exist solely for the frontend/ folder — a headless
+  # microservice that removes frontend/ deletes this block and that script together. Produces
+  # no version.txt, so the deploy scripts ignore its bundle dir.
+  - name: frontend-check
+    configuration:
+      image: node:24-alpine
+      scriptFile: scripts/frontend-check.sh
+  # --- end frontend gate ------------------------------------------------------------------
 
 # Processing steps run sequentially (order = list position), each receiving the
 # bundle. deploy-beta runs first and gates deploy (prod).

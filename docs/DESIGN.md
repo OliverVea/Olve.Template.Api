@@ -429,8 +429,11 @@ backpressured `Channel<T>` reference).
 
 ## 2. Frontend (FE)
 
-A companion template (likely a sibling repo, e.g. `Olve.Template.Web`, or a
-`frontend/` add-on switched on by a template parameter).
+A companion frontend that ships as an in-repo **`frontend/`** folder (resolved — see §2.6).
+It is **always present, not gated by a template parameter**: a service that needs no UI
+simply deletes the `frontend/` folder (and its CI/build step) rather than toggling an opt-in.
+The opt-in principle in this template is about *framework/runtime lock-in* (§2.1), not about
+whether the folder exists.
 
 ### 2.1 Stance
 
@@ -479,12 +482,17 @@ client-gen → component → API loop end-to-end.
 - `Olve.Pipelines/frontend/` — Lit + Vite consuming a Kiota TS client (the
   generated-client wiring to copy; Lit usage to make optional).
 
-### 2.6 Open questions
+### 2.6 Open questions — resolved
 
-- Separate repo vs. opt-in folder in this template?
-- TypeScript vs. plain JS for the vanilla baseline (QuestionBank uses TS; "no build
-  step required" pushes toward JS + JSDoc types). Recommendation: plain JS baseline,
-  TS available as opt-in, to honor "no build step required."
+- ~~Separate repo vs. opt-in folder in this template?~~ **Resolved: an in-repo `frontend/`
+  folder** (not a separate `Olve.Template.Web` repo).
+- ~~TypeScript vs. plain JS for the vanilla baseline?~~ **Resolved: vanilla TypeScript**
+  (Vite build), overriding the plain-JS recommendation below — chosen so the Kiota client is
+  consumed with full types. The litify-later and no-auto-rerender stances are unchanged.
+
+  *(Original recommendation, kept for the record: plain JS baseline, TS available as opt-in,
+  to honor "no build step required." QuestionBank uses TS; "no build step" pushed toward JS +
+  JSDoc types.)*
 
 ---
 

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Olve.Template.Api — messages</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --edge: color-mix(in oklab, currentColor 14%, transparent);
+      }
+      body {
+        font: 15px/1.5 system-ui, sans-serif;
+        max-width: 46rem;
+        margin: 3rem auto;
+        padding: 0 1.25rem;
+      }
+      header h1 {
+        font-size: 1.4rem;
+        margin: 0 0 0.25rem;
+      }
+      header p {
+        margin: 0 0 1.5rem;
+        opacity: 0.7;
+      }
+      details {
+        margin: 0 0 1.5rem;
+        border: 1px solid var(--edge);
+        border-radius: 8px;
+        padding: 0.5rem 0.9rem;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .token-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
+      .token-row input {
+        flex: 1;
+        font: inherit;
+        padding: 0.4rem 0.6rem;
+        border: 1px solid var(--edge);
+        border-radius: 6px;
+        background: transparent;
+        color: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Messages</h1>
+      <p>
+        A vanilla Web Component (<code>&lt;message-list&gt;</code>) talking to the live
+        <code>Olve.Template.Api</code> through a Kiota-generated TypeScript client.
+      </p>
+    </header>
+
+    <details>
+      <summary>Authenticated writes (optional)</summary>
+      <p style="opacity: 0.7; margin: 0.75rem 0 0">
+        <code>GET</code> is anonymous, so the list loads without a token. Creating, editing,
+        and deleting need a JWT — paste one below and it's attached as a Bearer token
+        (kept in <code>localStorage</code>). Without it, writes return <code>401</code>.
+      </p>
+      <div class="token-row">
+        <input id="token" type="password" placeholder="Bearer token (JWT)" autocomplete="off" />
+      </div>
+    </details>
+
+    <message-list></message-list>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
