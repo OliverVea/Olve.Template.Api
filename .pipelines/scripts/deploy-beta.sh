@@ -39,12 +39,14 @@ echo "Waiting for beta rollout..."
 ssh -o StrictHostKeyChecking=no "$HOST" \
   "kubectl -n apps-beta rollout status deploy/olve-template-api --timeout=120s"
 
-# Probe the edge-routed beta host. This requires the app's beta host + service to be
-# registered in the Olve.Homelab edge chart (apps-beta[]); until then this gate will
-# fail — see the README "Deployment / GitOps" section.
-echo "Verifying beta /health..."
+# Probe the app over its private (Tailscale) host. The *-private.ovea.pro hosts resolve, via
+# external-dns, to the Tailscale IP of the in-cluster ingress — reachable on the tailnet without
+# the public Cloudflare edge. Run the probe from the homelab node (a tailnet member) over SSH so
+# it goes through Tailscale rather than the deploy job's pod network.
+echo "Verifying beta /health via the private (Tailscale) host..."
 for i in 1 2 3 4 5; do
-  if curl -skf -o /dev/null https://olve-template-api-beta.ovea.pro/health; then
+  if ssh -o StrictHostKeyChecking=no "$HOST" \
+       "curl -skf -o /dev/null https://olve-template-api-private.ovea.pro/health"; then
     echo "Beta health OK"
     exit 0
   fi
