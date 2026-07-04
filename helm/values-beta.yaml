@@ -19,3 +19,8 @@ config:
 # supplies the OTLP OAuth2 client secret, which beta doesn't use. This empty list replaces the
 # base chart's `secrets`, so the beta Deployment references no secret at all.
 secrets: []
+
+# Beta uses the beta Authentik CA. Beta OTLP is plain HTTP (no outbound TLS there), but JWT
+# validation of protected endpoints fetches JWKS from auth-beta.ovea.pro over HTTPS, which needs it.
+authentikCa:
+  fileName: auth-beta-ca.crt

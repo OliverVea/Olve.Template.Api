@@ -49,3 +49,18 @@ spec:
             periodSeconds: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.authentikCa.enabled }}
+          volumeMounts:
+            # Trust the Authentik CA for outbound TLS to *.ovea.pro (auth/OTel/OpenBao). The
+            # chiseled runtime image's CA bundle doesn't cover it; drop the CA into the trust dir.
+            - name: authentik-ca
+              mountPath: /etc/ssl/certs/{{ .Values.authentikCa.fileName }}
+              subPath: {{ .Values.authentikCa.fileName }}
+              readOnly: true
+          {{- end }}
+      {{- if .Values.authentikCa.enabled }}
+      volumes:
+        - name: authentik-ca
+          configMap:
+            name: authentik-ca
+      {{- end }}

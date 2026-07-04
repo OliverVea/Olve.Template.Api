@@ -37,6 +37,13 @@ secrets:
     envMap:
       OpenTelemetry__OAuth2__ClientSecret: olve-template-api-client-secret
 
+# Mounts the Authentik CA (shared `authentik-ca` configMap in the namespace) so the app trusts
+# outbound TLS to *.ovea.pro (auth/OTel/OpenBao). Required in prod, where OTLP export authenticates
+# via OAuth2 over HTTPS to auth.ovea.pro. values-beta.yaml overrides fileName for the beta CA.
+authentikCa:
+  enabled: true
+  fileName: auth-prod-ca.crt
+
 slo:
   enabled: true
   labels:
