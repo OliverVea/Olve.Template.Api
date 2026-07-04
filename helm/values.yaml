@@ -35,7 +35,9 @@ config:
 secrets:
   - name: authentik-oidc-secrets
     envMap:
-      OpenTelemetry__OAuth2__ClientSecret: olve-template-api-client-secret
+      # The OTLP exporter authenticates as the shared `otel` OAuth2 client, so its secret is the
+      # `otel` client's own secret (key otel-client-secret), NOT this app's client secret.
+      OpenTelemetry__OAuth2__ClientSecret: otel-client-secret
 
 # Mounts the Authentik CA (shared `authentik-ca` configMap in the namespace) so the app trusts
 # outbound TLS to *.ovea.pro (auth/OTel/OpenBao). Required in prod, where OTLP export authenticates
