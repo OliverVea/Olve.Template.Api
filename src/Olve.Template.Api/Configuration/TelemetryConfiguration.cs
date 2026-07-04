@@ -21,8 +21,12 @@ public static class TelemetryConfiguration
         var clientSecret = builder.Configuration["OpenTelemetry:OAuth2:ClientSecret"];
         var scope = builder.Configuration["OpenTelemetry:OAuth2:Scope"];
 
+        // OAuth2 is opt-in: only when all three are actually provided. Empty (not just null)
+        // must disable it — otherwise an env var set to "" (e.g. a beta overlay that clears
+        // TokenUrl/ClientId for an unauthenticated OTLP endpoint) would build a token provider
+        // with blank credentials and crash the app at startup on the eager token request.
         OAuth2TokenProvider? tokenProvider = null;
-        if (tokenUrl is not null && clientId is not null && clientSecret is not null)
+        if (!string.IsNullOrEmpty(tokenUrl) && !string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(clientSecret))
         {
             tokenProvider = new OAuth2TokenProvider(tokenUrl, clientId, clientSecret, scope);
         }

@@ -1,12 +1,21 @@
 # Beta overlay, applied on top of values.yaml by deploy-beta.sh (`-f values-beta.yaml`).
-# Only the values that differ from prod for the apps-beta deploy. Beta points at the
-# beta Authentik + OTel endpoints; everything else (image, service, resources, slo,
-# secrets) is inherited from values.yaml. slo.enabled=false is passed via --set in
-# deploy-beta.sh (the sloth CRD is not installed cluster-wide yet), not here.
+# Only the values that differ from prod for the apps-beta deploy. slo.enabled=false is passed
+# via --set in deploy-beta.sh (the sloth CRD is not installed cluster-wide yet), not here.
 config:
+  # Beta Authentik, used for API JWT validation (bearer tokens on protected endpoints).
   Auth__Authority: "https://auth-beta.ovea.pro/application/o/olve-template-api/"
-  Auth__Audience: "olve-template-api-beta"
+  Auth__Audience: "olve-template-api"
+  # Beta OTLP collector. Unlike prod (otel.ovea.pro, OAuth2-gated), beta is UNAUTHENTICATED
+  # (Tailscale trust boundary) — matching every other app that deploys to apps-beta. Clearing
+  # TokenUrl/ClientId disables the exporter's OAuth2 (empty => no token provider; see
+  # Configuration/TelemetryConfiguration.cs). Sending a bearer token here fails with
+  # invalid_client and crashes startup.
   OpenTelemetry__Endpoint: "http://otel-beta.ovea.pro"
   OpenTelemetry__Protocol: "http"
-  OpenTelemetry__OAuth2__TokenUrl: "https://auth-beta.ovea.pro/application/o/token/"
-  OpenTelemetry__OAuth2__ClientId: "otel"
+  OpenTelemetry__OAuth2__TokenUrl: ""
+  OpenTelemetry__OAuth2__ClientId: ""
+
+# Beta needs no Kubernetes secret: the base chart's only secret (authentik-oidc-secrets)
+# supplies the OTLP OAuth2 client secret, which beta doesn't use. This empty list replaces the
+# base chart's `secrets`, so the beta Deployment references no secret at all.
+secrets: []
