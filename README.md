@@ -127,15 +127,32 @@ The pipeline shape:
 
 **Homelab conformance.** The Helm chart renders a **`ClusterIP` Service only — no Ingress**
 ([`Olve.Homelab`](https://github.com/OliverVea/Olve.Homelab) is the edge chart that owns all Ingress).
-To expose the app publicly, add its host + service to the edge chart's `apps[]` / `apps-beta[]` list —
-**not** to this chart. The `deploy-beta` health-gate probes `https://<app>-beta.ovea.pro/health`, so
-that beta host must be registered in the edge chart before the gate can pass.
+Routing is registered by adding the app's host + service to the edge chart's `apps:` list in
+`values-{beta,prod}.yaml` — **not** in this chart. The `deploy-beta` health-gate probes the
+Tailscale-private host `https://<app>-private.ovea.pro/health` from the homelab node, so that host
+must be registered in the edge chart before the gate can pass.
 
-Inspect runs, jobs, and logs with the `pl` CLI or the controller API. The
-[`ovea-olve-pipelines`](https://github.com/OliverVea/Olve.Pipelines) skill and the instance's `/docs`
-(served at [`pipelines-private.ovea.pro`](https://pipelines-private.ovea.pro), beta at
-`pipelines-beta.ovea.pro`) are the authoritative reference for the config schema, promotion gates, and
-the deploy model — start there rather than re-deriving it.
+### Per-namespace prerequisites (what bites a fresh deploy)
+
+Building and rolling out is automatic, but a generated app needs a few things provisioned in each
+target namespace before the pod actually runs. Each of these surfaced on a real deploy:
+
+- **Edge route** — add an entry to `Olve.Homelab`'s `values-{beta,prod}.yaml` `apps:` list (host
+  `<app>-private.ovea.pro`, external-dns target `100.100.117.17`, LE TLS). Without it the health
+  gate has nothing to probe.
+- **OTLP telemetry auth** — beta's `otel-beta.ovea.pro` is unauthenticated (Tailscale); prod's
+  `otel.ovea.pro` needs OAuth2 as the shared `otel` client, whose secret is the
+  `authentik-oidc-secrets` key **`otel-client-secret`**. (The chart defaults are correct; just
+  ensure that secret exists in `apps`.)
+- **Authentik CA** — the chiseled image can't validate `*.ovea.pro` TLS, so the chart mounts the
+  shared `authentik-ca` configMap (`authentikCa.enabled`). That configMap must exist in the namespace.
+
+Inspect runs, jobs, and logs with the **`pl` CLI** (`pl pipeline list`, `pl job logs <id>`,
+`pl binding status <id>`). The [`ovea-olve-pipelines`](https://github.com/OliverVea/Olve.Pipelines)
+skill and the instance's `/docs` (served at
+[`pipelines-private.ovea.pro`](https://pipelines-private.ovea.pro), beta at `pipelines-beta.ovea.pro`)
+are the authoritative reference for the config schema, promotion gates, and the deploy model — start
+there rather than re-deriving it.
 
 ## Configuration
 
