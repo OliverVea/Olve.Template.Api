@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -61,6 +62,48 @@ public static class AuthenticationConfiguration
                         new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
                     options.TokenValidationParameters.ValidateIssuerSigningKey = true;
                 }
+
+                // Diagnostics for the SPA login: a rejected bearer is otherwise a silent 401.
+                // Failures log at Warning (visible everywhere) with the IDX reason + the token's
+                // iss/aud/kid so a mismatch against ValidIssuers/ValidAudiences is obvious; the
+                // happy path logs at Debug (enable via Logging:LogLevel in beta). Never the token.
+                options.Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = context =>
+                    {
+                        var logger = context.HttpContext.RequestServices
+                            .GetRequiredService<ILoggerFactory>()
+                            .CreateLogger("Olve.Template.Api.Auth");
+                        var (iss, aud, kid) = DescribeToken(context.Request);
+                        logger.LogWarning(context.Exception,
+                            "JWT auth failed: {Reason} | token iss={Iss} aud={Aud} kid={Kid} | expected iss=[{ValidIssuers}] aud=[{ValidAudiences}]",
+                            context.Exception.Message, iss, aud, kid,
+                            string.Join(", ", validIssuers), string.Join(", ", validAudiences));
+                        return Task.CompletedTask;
+                    },
+                    OnChallenge = context =>
+                    {
+                        var logger = context.HttpContext.RequestServices
+                            .GetRequiredService<ILoggerFactory>()
+                            .CreateLogger("Olve.Template.Api.Auth");
+                        logger.LogDebug(
+                            "JWT challenge on {Path}: error={Error} desc={Desc}",
+                            context.Request.Path, context.Error, context.ErrorDescription);
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = context =>
+                    {
+                        var logger = context.HttpContext.RequestServices
+                            .GetRequiredService<ILoggerFactory>()
+                            .CreateLogger("Olve.Template.Api.Auth");
+                        var principal = context.Principal;
+                        logger.LogDebug("JWT validated: iss={Iss} aud={Aud} sub={Sub}",
+                            principal?.FindFirst("iss")?.Value,
+                            string.Join(",", principal?.FindAll("aud").Select(c => c.Value) ?? []),
+                            principal?.FindFirst("sub")?.Value);
+                        return Task.CompletedTask;
+                    },
+                };
             });
 
         builder.Services.AddAuthorizationBuilder()
@@ -74,5 +117,56 @@ public static class AuthenticationConfiguration
     {
         app.UseAuthentication();
         app.UseAuthorization();
+    }
+
+    // Read iss/aud/kid from the *incoming* bearer without validating it — so a rejected token's
+    // claims are visible in the failure log next to what the API expected. Best-effort: any parse
+    // problem yields nulls rather than throwing inside the auth event.
+    private static (string? Iss, string? Aud, string? Kid) DescribeToken(HttpRequest request)
+    {
+        var header = request.Headers.Authorization.ToString();
+        if (string.IsNullOrEmpty(header) ||
+            !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            return (null, null, null);
+        }
+
+        var parts = header["Bearer ".Length..].Trim().Split('.');
+        if (parts.Length < 2)
+        {
+            return (null, null, null);
+        }
+
+        try
+        {
+            return (ReadClaim(parts[1], "iss"), ReadClaim(parts[1], "aud"), ReadClaim(parts[0], "kid"));
+        }
+        catch
+        {
+            return (null, null, null);
+        }
+    }
+
+    private static string? ReadClaim(string segment, string name)
+    {
+        using var doc = JsonDocument.Parse(Base64UrlDecode(segment));
+        if (!doc.RootElement.TryGetProperty(name, out var el))
+        {
+            return null;
+        }
+
+        return el.ValueKind switch
+        {
+            JsonValueKind.String => el.GetString(),
+            JsonValueKind.Array => string.Join(",", el.EnumerateArray().Select(x => x.GetString())),
+            _ => el.ToString(),
+        };
+    }
+
+    private static byte[] Base64UrlDecode(string input)
+    {
+        var s = input.Replace('-', '+').Replace('_', '/');
+        s += (s.Length % 4) switch { 2 => "==", 3 => "=", _ => "" };
+        return Convert.FromBase64String(s);
     }
 }

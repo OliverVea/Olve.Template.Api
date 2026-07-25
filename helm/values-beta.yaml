@@ -8,6 +8,10 @@ config:
   # Beta public PKCE client for the SPA login (see values.yaml for the rationale).
   Auth__Frontend__Authority: "https://auth-beta.ovea.pro/application/o/olve-template-api-spa/"
   Auth__Frontend__ClientId: "olve-template-api-spa"
+  # Debug the SPA login in beta: surface our JWT diagnostics (validated/challenge at Debug;
+  # failures already log at Warning) plus the framework's own JwtBearer detail. Beta-only.
+  Logging__LogLevel__Olve.Template.Api.Auth: "Debug"
+  Logging__LogLevel__Microsoft.AspNetCore.Authentication: "Debug"
   # Beta OTLP collector. Unlike prod (otel.ovea.pro, OAuth2-gated), beta is UNAUTHENTICATED
   # (Tailscale trust boundary) — matching every other app that deploys to apps-beta. Clearing
   # TokenUrl/ClientId disables the exporter's OAuth2 (empty => no token provider; see
