@@ -5,6 +5,9 @@ config:
   # Beta Authentik, used for API JWT validation (bearer tokens on protected endpoints).
   Auth__Authority: "https://auth-beta.ovea.pro/application/o/olve-template-api/"
   Auth__Audience: "olve-template-api"
+  # Beta public PKCE client for the SPA login (see values.yaml for the rationale).
+  Auth__Frontend__Authority: "https://auth-beta.ovea.pro/application/o/olve-template-api-spa/"
+  Auth__Frontend__ClientId: "olve-template-api-spa"
   # Beta OTLP collector. Unlike prod (otel.ovea.pro, OAuth2-gated), beta is UNAUTHENTICATED
   # (Tailscale trust boundary) — matching every other app that deploys to apps-beta. Clearing
   # TokenUrl/ClientId disables the exporter's OAuth2 (empty => no token provider; see

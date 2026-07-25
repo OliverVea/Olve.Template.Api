@@ -54,9 +54,46 @@ VITE_API_TARGET=http://localhost:5080 npm run dev
 VITE_API_TARGET=https://olve-template-api-private.ovea.pro npm run dev
 ```
 
-`GET /messages` is anonymous, so the list loads with no auth. Creating / editing / deleting
-need a JWT — paste one into the "Authenticated writes" field and it's attached as a Bearer
-token (otherwise writes return `401`).
+`GET /api/messages` is anonymous, so the list loads with no auth. Creating / editing / deleting
+need a login — click **Log in** to run the OIDC flow (see below); the access token is then
+attached as a Bearer token automatically (otherwise writes return `401`).
+
+## Authentication (OIDC + PKCE)
+
+Login is a hand-rolled, dependency-free **Authorization Code + PKCE** flow in
+[`src/auth/oidc.ts`](src/auth/oidc.ts) (built on `fetch` + Web Crypto):
+
+- **Config is fetched at runtime** from `GET /api/auth-config` (`{ authority, clientId, scopes }`)
+  — *not* baked into the bundle, so one build serves beta and prod, each pointing at its own
+  Authentik. The authority's `.well-known/openid-configuration` supplies the authorize/token URLs.
+- **Log in** → PKCE challenge → redirect to Authentik → back to `/callback` → code exchanged for
+  tokens. The **access token** is kept in memory; the **refresh token** in `localStorage` so a
+  reload doesn't force re-login. Tokens refresh **proactively** (before expiry) and on a **401**
+  (refresh + retry once). **Log out** clears local state and ends the Authentik SSO session.
+- Storage is isolated to `store()`/`load()` in `oidc.ts` — swap it (memory-only, or a
+  backend-for-frontend httpOnly cookie, which is strictly safer) without touching the flow.
+
+> **Security note.** A SPA that holds tokens in the browser is exposed to XSS exfiltration of the
+> refresh token. That's the accepted SPA tradeoff; the safer option is a BFF where the backend
+> holds tokens and the browser only gets an httpOnly session cookie.
+
+### Authentik setup this needs
+
+The SPA authenticates as a **public** (PKCE, no secret) client, separate from the confidential
+client used for machine/CI tokens. In the homelab this is declared as an Authentik **blueprint**
+in [`Olve.Authentik`](https://github.com/OliverVea/Olve.Authentik) (GitOps — not created by hand)
+as `olve-template-api-spa`, alongside the existing `olve-template-api` provider. The provider:
+
+- **Client type:** Public. **Client ID:** `olve-template-api-spa` (matches `Auth__Frontend__ClientId`).
+- **Redirect URIs:** `http://localhost:5173/callback` (dev) and `https://<deployed-host>/callback`.
+- **Scopes / mappings:** `openid`, `email`, `profile`, `offline_access` (the last yields a refresh token).
+- **Signing key:** the same certificate as the `olve-template-api` provider, so the API's existing
+  JWKS validates its signatures.
+
+Its tokens carry this provider's own `iss` and an `aud` of `olve-template-api-spa` — both different
+from the resource provider's. The API trusts **both** issuers and **both** audiences (the SPA is
+its own frontend), so no Authentik audience remapping is needed. See `Auth__Frontend__*` in the
+Helm values and `AuthenticationConfiguration`.
 
 ## Build
 

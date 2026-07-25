@@ -40,6 +40,7 @@ Directory.Packages.props                        # Central package version manage
 |--------|------|------|-------------|
 | GET | `/` | No | The SPA (`frontend/`), served from `wwwroot` — see [Frontend](#frontend) |
 | GET | `/health` | No | Health check, returns 200 |
+| GET | `/api/auth-config` | No | Public OIDC settings for the SPA login (authority, client id, scopes) |
 | GET | `/api/messages?page=<n>&pageSize=<n>` | No | List messages (paginated, 1-based) |
 | POST | `/api/messages` | Yes (JWT) | Create a message (`{ "text": "…" }`) |
 | PUT | `/api/messages/{id}` | Yes (JWT) | Update a message (`{ "text": "…" }`) |

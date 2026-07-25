@@ -27,6 +27,12 @@ config:
   Logging__LogLevel__Microsoft.AspNetCore: "Warning"
   Auth__Authority: "https://auth.ovea.pro/application/o/olve-template-api/"
   Auth__Audience: "olve-template-api"
+  # Public PKCE client the SPA logs in as (separate from the confidential client used for machine
+  # tokens). Its tokens carry this provider's `iss` and an `aud` of its own client id, so
+  # AuthenticationConfiguration trusts both issuers AND both audiences. The SPA reads these at
+  # runtime from GET /api/auth-config. Defined as an Authentik blueprint in Olve.Authentik.
+  Auth__Frontend__Authority: "https://auth.ovea.pro/application/o/olve-template-api-spa/"
+  Auth__Frontend__ClientId: "olve-template-api-spa"
   OpenTelemetry__Endpoint: "https://otel.ovea.pro"
   OpenTelemetry__Protocol: "http"
   OpenTelemetry__OAuth2__TokenUrl: "https://auth.ovea.pro/application/o/token/"

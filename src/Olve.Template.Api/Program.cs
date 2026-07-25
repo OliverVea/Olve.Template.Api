@@ -25,7 +25,9 @@ app.MapAuthentication();
 app.MapHealthEndpoints();
 
 // The JSON API lives under /api/ so the SPA can own the site root (/, /index.html, assets).
-app.MapGroup("/api").MapMessageEndpoints();
+var api = app.MapGroup("/api");
+api.MapMessageEndpoints();
+api.MapFrontendConfig();
 
 // SPA client-side routing: any unmatched non-API GET returns index.html so deep links work.
 app.MapFallbackToFile("index.html").AllowAnonymous();

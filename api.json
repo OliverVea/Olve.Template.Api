@@ -205,10 +205,55 @@
           }
         }
       }
+    },
+    "/api/auth-config": {
+      "get": {
+        "tags": [
+          "Olve.Template.Api"
+        ],
+        "operationId": "GetAuthConfig",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrontendAuthConfig"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "FrontendAuthConfig": {
+        "required": [
+          "authority",
+          "clientId",
+          "scopes"
+        ],
+        "type": "object",
+        "properties": {
+          "authority": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scopes": {
+            "type": "string"
+          }
+        }
+      },
       "IdOfMessage": {
         "type": "string",
         "format": "uuid"

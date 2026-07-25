@@ -33,19 +33,29 @@
         cursor: pointer;
         font-weight: 600;
       }
-      .token-row {
+      .auth-bar {
         display: flex;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.6rem;
+        min-height: 2rem;
+        margin: 0 0 1.5rem;
       }
-      .token-row input {
-        flex: 1;
+      .auth-bar .who {
+        opacity: 0.75;
+        font-size: 0.9rem;
+      }
+      .auth-bar button {
         font: inherit;
-        padding: 0.4rem 0.6rem;
+        cursor: pointer;
         border: 1px solid var(--edge);
         border-radius: 6px;
         background: transparent;
         color: inherit;
+        padding: 0.35rem 0.8rem;
+      }
+      .auth-bar button:hover {
+        background: color-mix(in oklab, currentColor 8%, transparent);
       }
     </style>
   </head>
@@ -58,17 +68,9 @@
       </p>
     </header>
 
-    <details>
-      <summary>Authenticated writes (optional)</summary>
-      <p style="opacity: 0.7; margin: 0.75rem 0 0">
-        <code>GET</code> is anonymous, so the list loads without a token. Creating, editing,
-        and deleting need a JWT — paste one below and it's attached as a Bearer token
-        (kept in <code>localStorage</code>). Without it, writes return <code>401</code>.
-      </p>
-      <div class="token-row">
-        <input id="token" type="password" placeholder="Bearer token (JWT)" autocomplete="off" />
-      </div>
-    </details>
+    <!-- Log in / who's-logged-in + log out, populated by main.ts. GET is anonymous so the list
+         loads either way; creating, editing and deleting need a login (OIDC + PKCE via Authentik). -->
+    <div id="auth" class="auth-bar"></div>
 
     <message-list></message-list>
 
