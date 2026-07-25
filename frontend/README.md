@@ -51,7 +51,7 @@ npm run dev
 
 # or against a local `dotnet run`, or the tailnet host:
 VITE_API_TARGET=http://localhost:5080 npm run dev
-VITE_API_TARGET=https://olve-template-api-private.ovea.pro npm run dev
+VITE_API_TARGET=https://olve-template-api-beta.ovea.pro npm run dev
 ```
 
 `GET /api/messages` is anonymous, so the list loads with no auth. Creating / editing / deleting

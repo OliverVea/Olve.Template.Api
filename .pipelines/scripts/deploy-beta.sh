@@ -46,7 +46,7 @@ ssh -o StrictHostKeyChecking=no "$HOST" \
 echo "Verifying beta /health via the private (Tailscale) host..."
 for i in 1 2 3 4 5; do
   if ssh -o StrictHostKeyChecking=no "$HOST" \
-       "curl -skf -o /dev/null https://olve-template-api-private.ovea.pro/health"; then
+       "curl -skf -o /dev/null https://olve-template-api-beta.ovea.pro/health"; then
     echo "Beta health OK"
     exit 0
   fi
