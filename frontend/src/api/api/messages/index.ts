@@ -44,8 +44,8 @@ export interface MessagesRequestBuilder extends BaseRequestBuilder<MessagesReque
      toPostRequestInformation(body: MessageRequest, requestConfiguration?: RequestConfiguration<object> | undefined) : RequestInformation;
 }
 export interface MessagesRequestBuilderGetQueryParameters {
-    page?: string;
-    pageSize?: string;
+    page?: number;
+    pageSize?: number;
 }
 /**
  * Uri template for the request builder.

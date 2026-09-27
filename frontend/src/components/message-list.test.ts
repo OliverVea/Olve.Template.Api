@@ -4,7 +4,7 @@ import { MessageList } from "./message-list.js";
 
 /**
  * A minimal fake of the Kiota client — MessageList only touches `api.messages.get/post/byId`,
- * so we stub exactly those and cast. `totalCount` is an `UntypedNode`-like `{ getValue }`.
+ * so we stub exactly those and cast.
  */
 function fakeClient(overrides: {
   get?: () => Promise<unknown>;
@@ -15,9 +15,7 @@ function fakeClient(overrides: {
   const put = vi.fn(overrides.put ?? (async () => ({})));
   const del = vi.fn(overrides.del ?? (async () => new ArrayBuffer(0)));
   const messages = {
-    get: vi.fn(
-      overrides.get ?? (async () => ({ items: [], totalCount: node(0), hasNextPage: false })),
-    ),
+    get: vi.fn(overrides.get ?? (async () => ({ items: [], totalCount: 0, hasNextPage: false }))),
     post: vi.fn(overrides.post ?? (async () => ({}))),
     byId: vi.fn(() => ({ put, delete: del })),
   };
@@ -34,8 +32,6 @@ function fakeClient(overrides: {
   };
 }
 
-const node = (value: number) => ({ getValue: () => value });
-
 beforeAll(() => customElements.define(MessageList.tagName, MessageList));
 
 function make(): MessageList {
@@ -50,7 +46,7 @@ describe("<message-list>", () => {
           { id: "aaaaaaaa-0000", text: "hello" },
           { id: "bbbbbbbb-1111", text: "world" },
         ],
-        totalCount: node(2),
+        totalCount: 2,
         hasNextPage: false,
       }),
     });

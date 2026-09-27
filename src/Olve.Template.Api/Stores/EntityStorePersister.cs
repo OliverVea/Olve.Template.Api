@@ -17,7 +17,7 @@ namespace Olve.Template.Api.Stores;
 /// </para>
 /// <para>
 /// v1 is whole-snapshot and single-store. Per-entity/delta saves and multi-store snapshots are out
-/// of scope (the events already carry <see cref="Id{T}"/>, so deltas are a later optimisation).
+/// of scope (the events already carry the committed values, so deltas are a later optimisation).
 /// </para>
 /// </remarks>
 /// <typeparam name="T">The entity type; must expose an <see cref="Id{T}"/>.</typeparam>
@@ -32,7 +32,10 @@ public sealed class EntityStorePersister<T> : IHostedLifecycleService, IDisposab
 
     // Serializes writes so a debounced flush and the shutdown flush can never overlap.
     private readonly SemaphoreSlim _saveGate = new(1, 1);
-    private readonly Action<Id<T>> _onChanged;
+    // One handler per event: Unsubscribe needs the same delegate instances Subscribe was given.
+    private readonly Action<EntityAdded<T, Id<T>>> _onAdded;
+    private readonly Action<EntityUpdated<T, Id<T>>> _onUpdated;
+    private readonly Action<EntityDeleted<T, Id<T>>> _onDeleted;
 
     private ITimer? _timer;
 
@@ -54,7 +57,9 @@ public sealed class EntityStorePersister<T> : IHostedLifecycleService, IDisposab
         _timeProvider = timeProvider;
         _logger = logger;
         _snapshotStore = snapshotStore;
-        _onChanged = _ => RequestSave();
+        _onAdded = _ => RequestSave();
+        _onUpdated = _ => RequestSave();
+        _onDeleted = _ => RequestSave();
     }
 
     /// <summary>Loads the snapshot before the host starts serving. A load failure throws (crashloop) rather than risk overwriting good state.</summary>
@@ -74,9 +79,9 @@ public sealed class EntityStorePersister<T> : IHostedLifecycleService, IDisposab
         }
 
         // Subscribe before loading so nothing is missed; the _loading guard suppresses the echo.
-        _store.OnAdded.Subscribe(_onChanged);
-        _store.OnUpdated.Subscribe(_onChanged);
-        _store.OnDeleted.Subscribe(_onChanged);
+        _store.OnAdded.Subscribe(_onAdded);
+        _store.OnUpdated.Subscribe(_onUpdated);
+        _store.OnDeleted.Subscribe(_onDeleted);
 
         _loading = true;
         try
@@ -227,9 +232,9 @@ public sealed class EntityStorePersister<T> : IHostedLifecycleService, IDisposab
     public void Dispose()
     {
         _timer?.Dispose();
-        _store.OnAdded.Unsubscribe(_onChanged);
-        _store.OnUpdated.Unsubscribe(_onChanged);
-        _store.OnDeleted.Unsubscribe(_onChanged);
+        _store.OnAdded.Unsubscribe(_onAdded);
+        _store.OnUpdated.Unsubscribe(_onUpdated);
+        _store.OnDeleted.Unsubscribe(_onDeleted);
         _saveGate.Dispose();
     }
 }

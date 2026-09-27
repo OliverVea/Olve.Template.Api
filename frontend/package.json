@@ -16,15 +16,15 @@
     "generate-client": "cd .. && dotnet tool run kiota generate -l typescript -d api.json -c OlveTemplateApiClient -o frontend/src/api -n OlveTemplateApi --clean-output"
   },
   "dependencies": {
-    "@microsoft/kiota-abstractions": "1.0.0-preview.103",
-    "@microsoft/kiota-http-fetchlibrary": "1.0.0-preview.103",
-    "@microsoft/kiota-serialization-form": "1.0.0-preview.103",
-    "@microsoft/kiota-serialization-json": "1.0.0-preview.103",
-    "@microsoft/kiota-serialization-multipart": "1.0.0-preview.103",
-    "@microsoft/kiota-serialization-text": "1.0.0-preview.103"
+    "@microsoft/kiota-abstractions": "1.0.0-preview.106",
+    "@microsoft/kiota-http-fetchlibrary": "1.0.0-preview.106",
+    "@microsoft/kiota-serialization-form": "1.0.0-preview.106",
+    "@microsoft/kiota-serialization-json": "1.0.0-preview.106",
+    "@microsoft/kiota-serialization-multipart": "1.0.0-preview.106",
+    "@microsoft/kiota-serialization-text": "1.0.0-preview.106"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.2",
+    "@biomejs/biome": "2.5.14",
     "happy-dom": "^20.10.6",
     "typescript": "^6.0.3",
     "vite": "^8.1.3",

@@ -157,8 +157,8 @@ npm run generate-client
 ```
 
 > **Runtime version pinning.** The generated code targets a specific `@microsoft/kiota-*`
-> runtime. Kiota `1.32.5` (see `../.config/dotnet-tools.json`) pairs with the
-> `1.0.0-preview.103` runtime pinned in `package.json` — a mismatched runtime changes
+> runtime. Kiota `1.35.0` (see `../.config/dotnet-tools.json`) pairs with the
+> `1.0.0-preview.106` runtime pinned in `package.json` — a mismatched runtime changes
 > serializer signatures and breaks the build. Run `dotnet tool run kiota info -d ../api.json
 > -l TypeScript` to see the matching versions, and always bump the kiota CLI, regenerate, and
 > bump the runtime together.

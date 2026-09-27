@@ -398,6 +398,9 @@
             ],
             "format": "int32"
           },
+          "isRetryable": {
+            "type": "boolean"
+          },
           "source": {
             "type": [
               "null",

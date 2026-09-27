@@ -47,10 +47,10 @@ export class MessageList extends BaseElement {
     this.render();
     try {
       const page = await this.#client.api.messages.get({
-        queryParameters: { page: String(this.#page), pageSize: String(this.#pageSize) },
+        queryParameters: { page: this.#page, pageSize: this.#pageSize },
       });
       this.#messages = page?.items ?? [];
-      this.#totalCount = untypedToNumber(page?.totalCount);
+      this.#totalCount = page?.totalCount ?? 0;
       this.#hasNextPage = page?.hasNextPage ?? false;
       this.#status = "ready";
     } catch (error) {
@@ -236,17 +236,6 @@ export class MessageList extends BaseElement {
       }
     }
   }
-}
-
-/**
- * `PageOfMessage.totalCount` arrives as an `UntypedNode` because the OpenAPI schema types
- * the counts as `integer | string` (an Olve.Results pagination quirk). Read its value
- * defensively and coerce to a number.
- */
-function untypedToNumber(node: unknown): number {
-  const value = (node as { getValue?: () => unknown } | null | undefined)?.getValue?.();
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 /** Turn a thrown Kiota error into a human-readable line, calling out the auth case. */

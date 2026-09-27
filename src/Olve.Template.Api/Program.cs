@@ -2,6 +2,7 @@ using Olve.Template.Api.Configuration;
 using Olve.Template.Api.Health;
 using Olve.Template.Api.Messages;
 using Olve.Utilities.AsyncOnStartup;
+using Olve.Utilities.Stores;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
@@ -12,6 +13,10 @@ builder.ConfigureTelemetry();
 builder.Services.AddMessageServices(builder.Configuration);
 
 var app = builder.Build();
+
+// Store event handlers are isolated from each other; without this their exceptions are swallowed.
+var eventLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Olve.Template.Api.Events");
+EventDispatch.OnHandlerException = ex => eventLogger.LogError(ex, "A store event handler threw.");
 
 // Serve the SPA (frontend/dist, copied into wwwroot by the Dockerfile) at the site root.
 // Static assets and the index fallback are anonymous — the RequireAuthenticatedUser fallback

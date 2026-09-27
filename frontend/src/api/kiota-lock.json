@@ -1,8 +1,8 @@
 {
-  "descriptionHash": "997916A604087A945D98B80BACD0EFF0BE1E9395FEB72FEA9DE75E24AA0B08AD7F412FA34637FB63FB28195813C486D25B1EC92CE8B81B9143213B42A55EDF6B",
+  "descriptionHash": "20B15F1295FCB5F147153BBE73E7CA176700F9967D56CB706BCE5E1AF9617E3BC9CC4CC6EC08E1CE6D7833C29B6B3C8CEA07039F978021AABA38B50262A00E16",
   "descriptionLocation": "../../../api.json",
   "lockFileVersion": "1.0.0",
-  "kiotaVersion": "1.32.5",
+  "kiotaVersion": "1.35.0",
   "clientClassName": "OlveTemplateApiClient",
   "typeAccessModifier": "Public",
   "clientNamespaceName": "OlveTemplateApi",
