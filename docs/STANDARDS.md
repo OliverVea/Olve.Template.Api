@@ -14,6 +14,9 @@ reason. Back a rule with a test where possible.
 - `PUT` and `DELETE` MUST be idempotent in effect: repeating one leaves the same state.
 - Expected failures MUST be `Result` problems (Olve.Results), never exceptions. They reach the
   client as a `ResultProblem[]` body via Olve.MinimalApi's `.WithResultMapping()`.
+- A missing resource (unknown id or key) MUST be a `NotFoundProblem`, which answers 404; any other
+  problem answers 400. An endpoint that can answer 404 MUST declare it with
+  `.Produces<ResultProblem[]>(StatusCodes.Status404NotFound)`.
 - Request bodies MUST be validated at the edge with `.WithValidation<TRequest, TValidator>()`,
   so a handler only ever sees valid input.
 - Timestamps MUST be UTC ISO-8601; IDs are opaque strings to clients.

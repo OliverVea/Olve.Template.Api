@@ -83,15 +83,24 @@ public class MessageTests(ApiTarget target)
         await Assert.That(await FindAsync(client, created.Id)).IsNull();
     }
 
-    // Olve.MinimalApi maps every problem to 400, including not-found; a 404 needs library support.
     [Test]
-    public async Task DeleteMessage_Unknown_Returns400()
+    public async Task DeleteMessage_Unknown_Returns404()
     {
         using var client = target.CreateAuthenticatedClient();
 
         using var response = await client.DeleteAsync($"/api/messages/{Guid.NewGuid()}");
 
-        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task UpdateMessage_Unknown_Returns404()
+    {
+        using var client = target.CreateAuthenticatedClient();
+
+        using var response = await client.PutJsonAsync($"/api/messages/{Guid.NewGuid()}", new { text = "nobody home" });
+
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
     }
 
     // Pages through the whole list: on a shared server the message may not be on the first page.

@@ -20,7 +20,7 @@ public sealed class CreateMessageHandler(EntityStore<Message> store) : IHandler<
 /// <summary>The handler input for an update — carries the route id alongside the validated body text.</summary>
 public sealed record UpdateMessageCommand(Id<Message> Id, string Text);
 
-/// <summary>Updates an existing <see cref="Message"/>, or returns the store's not-found problem.</summary>
+/// <summary>Updates an existing <see cref="Message"/>, or returns the store's <see cref="NotFoundProblem"/> (404).</summary>
 public sealed class UpdateMessageHandler(EntityStore<Message> store) : IHandler<UpdateMessageCommand, Message>
 {
     /// <inheritdoc />
@@ -49,7 +49,7 @@ public sealed class DeleteMessageHandler(EntityStore<Message> store) : IHandler<
         var deletion = store.Delete(request);
         if (deletion.WasNotFound)
         {
-            return Task.FromResult<Result>(new ResultProblem("Message with id '{0}' was not found.", request));
+            return Task.FromResult<Result>(new NotFoundProblem("Message with id '{0}' was not found.", request));
         }
 
         return Task.FromResult(Result.Success());

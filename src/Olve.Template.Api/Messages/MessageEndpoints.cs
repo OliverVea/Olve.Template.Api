@@ -71,11 +71,13 @@ public static class MessageEndpoints
                 handler.HandleAsync(new UpdateMessageCommand(id, request.Text), ct))
             .WithName("UpdateMessage")
             .WithValidation<MessageRequest, MessageRequestValidator>()
-            .WithResultMapping<Message>();
+            .WithResultMapping<Message>()
+            .Produces<ResultProblem[]>(StatusCodes.Status404NotFound);
 
         app.MapDelete("/messages/{id}", (DeleteMessageHandler handler, Id<Message> id, CancellationToken ct) =>
                 handler.RunAsync(id, ct))
             .WithName("DeleteMessage")
-            .WithResultMapping();
+            .WithResultMapping()
+            .Produces<ResultProblem[]>(StatusCodes.Status404NotFound);
     }
 }

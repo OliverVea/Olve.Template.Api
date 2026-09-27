@@ -1,3 +1,4 @@
+using Olve.Results;
 using Olve.Results.TUnit;
 using Olve.Template.Api.Messages;
 using Olve.Utilities.Ids;
@@ -43,7 +44,7 @@ public class MessageHandlerTests
     }
 
     [Test]
-    public async Task Update_MissingMessage_Fails()
+    public async Task Update_MissingMessage_FailsNotFound()
     {
         var store = new EntityStore<Message>([]);
         var handler = new UpdateMessageHandler(store);
@@ -51,6 +52,7 @@ public class MessageHandlerTests
         var result = await handler.HandleAsync(new UpdateMessageCommand(Id.New<Message>(), "x"), CancellationToken.None);
 
         await Assert.That(result).Failed();
+        await Assert.That(result.TryPickProblem<NotFoundProblem>(out _)).IsTrue();
     }
 
     [Test]
@@ -67,7 +69,7 @@ public class MessageHandlerTests
     }
 
     [Test]
-    public async Task Delete_MissingMessage_Fails()
+    public async Task Delete_MissingMessage_FailsNotFound()
     {
         var store = new EntityStore<Message>([]);
         var handler = new DeleteMessageHandler(store);
@@ -75,5 +77,6 @@ public class MessageHandlerTests
         var result = await handler.RunAsync(Id.New<Message>(), CancellationToken.None);
 
         await Assert.That(result).Failed();
+        await Assert.That(result.TryPickProblem<NotFoundProblem>(out _)).IsTrue();
     }
 }

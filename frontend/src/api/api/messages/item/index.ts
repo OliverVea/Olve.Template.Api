@@ -14,6 +14,7 @@ export interface MessagesItemRequestBuilder extends BaseRequestBuilder<MessagesI
      * @param requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @returns {Promise<ArrayBuffer>}
      * @throws {ResultProblem} error when the service returns a 400 status code
+     * @throws {ResultProblem} error when the service returns a 404 status code
      */
      delete(requestConfiguration?: RequestConfiguration<object> | undefined) : Promise<ArrayBuffer | undefined>;
     /**
@@ -21,6 +22,7 @@ export interface MessagesItemRequestBuilder extends BaseRequestBuilder<MessagesI
      * @param requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @returns {Promise<Message>}
      * @throws {ResultProblem} error when the service returns a 400 status code
+     * @throws {ResultProblem} error when the service returns a 404 status code
      */
      put(body: MessageRequest, requestConfiguration?: RequestConfiguration<object> | undefined) : Promise<Message | undefined>;
     /**
@@ -48,6 +50,7 @@ export const MessagesItemRequestBuilderRequestsMetadata: RequestsMetadata = {
         responseBodyContentType: "application/json",
         errorMappings: {
             400: createResultProblemFromDiscriminatorValue as ParsableFactory<Parsable>,
+            404: createResultProblemFromDiscriminatorValue as ParsableFactory<Parsable>,
         },
         adapterMethodName: "sendPrimitive",
         responseBodyFactory:  "ArrayBuffer",
@@ -57,6 +60,7 @@ export const MessagesItemRequestBuilderRequestsMetadata: RequestsMetadata = {
         responseBodyContentType: "application/json",
         errorMappings: {
             400: createResultProblemFromDiscriminatorValue as ParsableFactory<Parsable>,
+            404: createResultProblemFromDiscriminatorValue as ParsableFactory<Parsable>,
         },
         adapterMethodName: "send",
         responseBodyFactory:  createMessageFromDiscriminatorValue,
