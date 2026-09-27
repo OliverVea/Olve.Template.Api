@@ -31,7 +31,7 @@ trap 'rm -rf "$before"' EXIT
 cp -r frontend/src/api/. "$before"
 npm run --prefix frontend generate-client >/dev/null
 rm -f frontend/src/api/.kiota.log
-if ! diff -r -x kiota-lock.json "$before" frontend/src/api; then
+if ! diff -r -x kiota-lock.json -x .kiota.log "$before" frontend/src/api; then
   echo "frontend/src/api is out of date with the API: commit the regenerated client." >&2
   exit 1
 fi

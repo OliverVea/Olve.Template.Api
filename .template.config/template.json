@@ -50,7 +50,13 @@
             ".claude/**",
             ".template.config/**",
             "TestResults/**",
-            "docs/DESIGN.md"
+            "docs/DESIGN.md",
+            "artifacts/**",
+            "clients/**",
+            "data/**",
+            "**/node_modules/**",
+            "frontend/dist/**",
+            "**/.kiota.log"
           ]
         }
       ]
