@@ -6,25 +6,40 @@ See [README.md](README.md) for project structure, endpoints, configuration, CI e
 
 ```bash
 dotnet build                                                # Build
-dotnet test                                                 # Unit tests only
-dotnet test -p:RunIntegrationTests=true -p:RunUnitTests=false  # Integration tests only
-dotnet test -p:RunIntegrationTests=true                     # All tests
+dotnet test                                                 # Unit + API tests (API tests in-process)
+dotnet test -p:RunApiTests=false                            # Unit tests only
 dotnet run --project src/Olve.Template.Api                  # Run locally
 ```
+
+`mise run ci` (or `npx mise run ci` without mise installed) is the pipeline gate: backend tests,
+client drift check, frontend. `mise run api:image` runs the API tests against the Docker image
+(the AOT check; needs Docker), `API_BASE_URL=… mise run api:remote` against any running server.
 
 ## Conventions
 
 - .NET 10, C# with file-scoped namespaces, nullable enabled, implicit usings
 - Package versions managed centrally in `Directory.Packages.props` — do not add `Version` attributes in csproj files
 - Local config via `dotnet user-secrets`, not appsettings files
-- OpenAPI spec `api.json` is generated on build by `Microsoft.Extensions.ApiDescription.Server`
+- OpenAPI spec is generated on build into `artifacts/openapi/api.json` (gitignored) by `Microsoft.Extensions.ApiDescription.Server`; generated output never goes in source folders, except the committed Kiota client in `frontend/src/api` (kept honest by `mise run client:check`)
+- API tests are raw HTTP behaviour tests that must pass against any target (`ApiTarget`); no C# client
+
+## Standards
+
+Follow [`docs/STANDARDS.md`](docs/STANDARDS.md) (MUST/SHOULD rules for API behaviour, code and tests).
+
+## Decisions are dated leanings
+
+Notes under `docs/` record *dated leanings*, not binding decisions. Use them to orient when in
+doubt, but before relying on one that predates the current work, confirm with Oliver that it
+still holds. When a leaning changes, rewrite the entry and its date.
 
 ## Deployment (GitOps)
 
 This repo deploys via **Olve.Pipelines** — the `.pipelines/` directory is the live deploy config
-(single source of truth; pushing to `main` redeploys). Build+test run in parallel and gate
-`deploy-beta` → `deploy` (beta gates prod). The Helm chart is **ClusterIP-only**; public exposure is
-registered in the `Olve.Homelab` edge chart, not here. **Invoke the `ovea-olve-pipelines` skill** for
+(single source of truth; pushing to `main` redeploys). Build + `check` (`mise run ci`) run in
+parallel and gate `deploy-beta` → `test-after-beta` (API tests against beta) → `deploy` (beta gates
+prod). The Helm chart is **ClusterIP-only**; public exposure is registered in the `Olve.Homelab`
+edge chart, not here. **Invoke the `ovea-olve-pipelines` skill** for
 the authoritative model (config schema, secrets, promotion gates) before changing `.pipelines/` —
 don't re-derive it. See [README.md](README.md#deployment-gitops) for the full write-up.
 
@@ -52,7 +67,7 @@ don't re-derive it. See [README.md](README.md#deployment-gitops) for the full wr
   - [Olve.Results.TUnit](https://olivervea.github.io/Olve.Utilities/src/Olve.Results.TUnit/README.html) — TUnit assertions for Result types (`Succeeded()`, `Failed()`, etc.)
 - [Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines) — GitOps CD service; deploy model for this repo's `.pipelines/`. Skill: `ovea-olve-pipelines`. Instances: `pipelines-private.ovea.pro` (prod), `pipelines-beta.ovea.pro` (beta)
 - [Olve.Homelab](https://github.com/OliverVea/Olve.Homelab) — edge chart that owns all Ingress; register an app's public host + service here, not in the app chart
+- [mise](https://mise.jdx.dev/) — toolchain pinning + task runner (`mise run ci`)
 - [TUnit](https://tunit.dev/docs/intro) — test framework, uses `await Assert.That(...)` fluent syntax (not xUnit/NUnit)
 - [Rocks](https://raw.githubusercontent.com/JasonBock/Rocks/refs/heads/main/docs/Overview.md) — source-generated mocking (AOT-compatible)
-- [Refitter](https://refitter.github.io/articles/refitter-file-format.html) — C# client source gen from OpenAPI via Refit (.refitter file format)
 - [Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview) — TypeScript client gen from OpenAPI

@@ -8,3 +8,4 @@ TestResults
 # image context — the Dockerfile's Node stage runs a clean `npm ci` + `npm run build`.
 **/node_modules
 frontend/dist
+artifacts

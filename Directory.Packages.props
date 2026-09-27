@@ -20,10 +20,7 @@
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
-    <PackageVersion Include="Refit" Version="13.1.0" />
-    <PackageVersion Include="Refitter.SourceGenerator" Version="2.0.0" />
     <PackageVersion Include="Rocks" Version="10.3.2" />
-    <PackageVersion Include="Testcontainers" Version="4.15.0" />
     <PackageVersion Include="TUnit" Version="1.69.24" />
   </ItemGroup>
 </Project>

@@ -4,9 +4,6 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Olve.Template.Api.UnitTests/Olve.Template.Api.UnitTests.csproj" />
-    <Project Path="test/Olve.Template.Api.IntegrationTests/Olve.Template.Api.IntegrationTests.csproj" />
-  </Folder>
-  <Folder Name="/clients/">
-    <Project Path="clients/Olve.Template.Api.Client/Olve.Template.Api.Client.csproj" />
+    <Project Path="test/Olve.Template.Api.ApiTests/Olve.Template.Api.ApiTests.csproj" />
   </Folder>
 </Solution>

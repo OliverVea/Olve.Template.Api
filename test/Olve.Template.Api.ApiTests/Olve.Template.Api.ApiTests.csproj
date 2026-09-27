@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    API tests: the service's behaviour over raw HTTP, one suite with a selectable target (ApiTarget):
+    in-process via WebApplicationFactory by default, or any running server when API_BASE_URL is set
+    (`mise run api:image` runs them against the Docker image, test-after-beta against live beta).
+    On by default; opt out with -p:RunApiTests=false.
+  -->
+  <PropertyGroup>
+    <IsTestProject Condition="'$(RunApiTests)' == 'false'">false</IsTestProject>
+    <IsTestingPlatformApplication Condition="'$(RunApiTests)' == 'false'">false</IsTestingPlatformApplication>
+    <OutputType Condition="'$(RunApiTests)' == 'false'">Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+    <PackageReference Include="TUnit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Olve.Template.Api/Olve.Template.Api.csproj" />
+  </ItemGroup>
+
+</Project>

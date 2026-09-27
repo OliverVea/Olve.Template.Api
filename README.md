@@ -22,13 +22,14 @@ src/Olve.Template.Api/                          # API application (minimal API)
 ├── Health/                                     # Health check endpoints
 └── appsettings.json                            # Default configuration
 test/Olve.Template.Api.UnitTests/               # Unit tests (TUnit + Rocks)
-test/Olve.Template.Api.IntegrationTests/        # Integration tests (TUnit + Testcontainers)
-clients/Olve.Template.Api.Client/               # Generated C# client (Refitter CLI + Refit)
-clients/olve-template-api-client-ts/            # Generated TypeScript client (Kiota)
+test/Olve.Template.Api.ApiTests/                # API tests over HTTP (in-process or any base URL)
 frontend/                                       # Vanilla Web Components + TS frontend (see frontend/README.md)
+docs/STANDARDS.md                               # MUST/SHOULD rules for API behaviour, code and tests
+artifacts/                                      # Generated output (OpenAPI document), gitignored
+mise.toml                                       # Toolchain pins + tasks; `mise run ci` is the pipeline gate
 tools/version.cs                                # CalVer versioning script
 helm/                                           # Helm chart for Kubernetes (ClusterIP Service + SLO)
-.pipelines/                                     # Olve.Pipelines CD config (build, test, deploy beta→prod)
+.pipelines/                                     # Olve.Pipelines CD config (build + check, beta → test → prod)
 Dockerfile                                      # Multi-stage build (AOT, chiseled)
 Directory.Build.props                           # Shared build properties (TFM, nullable, etc.)
 Directory.Packages.props                        # Central package version management
@@ -56,48 +57,37 @@ The `Messages` feature is the template's worked example — it exercises `Id<T>`
 
 ## Build & Test
 
+[mise](https://mise.jdx.dev/) is the single entry point: it pins node and dotnet and runs the
+same tasks for you, Claude and the pipeline. Each task delegates to the native build, so plain
+`dotnet` / `npm` commands work too.
+
 ```bash
-# Restore and build
-dotnet restore
-dotnet build
+mise run ci              # Everything the pipeline's check step runs
+mise run backend:test    # dotnet build + dotnet test (unit + in-process API tests)
+mise run client:check    # Regenerate the TS client; fail if the committed one drifted
+mise run frontend:check  # Frontend lint, tests, production build
+mise run api:image       # API tests against the real Docker image (needs Docker)
+API_BASE_URL=https://… mise run api:remote   # API tests against a deployed server
 
-# Unit tests only (default)
-dotnet test
-
-# Integration tests only
-dotnet test -p:RunIntegrationTests=true -p:RunUnitTests=false
-
-# All tests
-dotnet test -p:RunIntegrationTests=true
+dotnet test                          # Unit + API tests
+dotnet test -p:RunApiTests=false     # Unit tests only
 ```
 
-Integration tests run the real service via [Testcontainers](https://dotnet.testcontainers.org/): `AppFixture` builds the `Dockerfile` image, starts a container (waiting on `/health`), and exercises it through the generated Refit client — so the tests cover the AOT-published binary end to end, including JSON serialization. The fixture lifecycle is managed via TUnit's `IAsyncInitializer` + `ClassDataSource` pattern.
+**API tests** (`test/Olve.Template.Api.ApiTests`) are one HTTP suite with a selectable target
+(`ApiTarget`): in-process via `WebApplicationFactory` by default, or any running server when
+`API_BASE_URL` is set. To mint tokens against a base URL, also set `API_SIGNING_KEY`,
+`API_ISSUER` and `API_AUDIENCE` to the server's `Auth:*` settings; without them, tests that need a
+token skip. The same suite runs in the pipeline twice: in-process in `check`, and against live
+beta in `test-after-beta`.
 
-To add a dependency (e.g. PostgreSQL):
+In-process tests run JIT, so they can't catch what only breaks in the AOT-published binary (a
+missing `[JsonSerializable]`, reflection). `mise run api:image` builds the real image and runs the
+suite against it; run it when you touch serialization. `test-after-beta` covers the same ground
+for every deploy.
 
-1. Add the Testcontainers module to `Directory.Packages.props` and the integration test project:
-   ```xml
-   <!-- Directory.Packages.props -->
-   <PackageVersion Include="Testcontainers.PostgreSql" Version="4.11.0" />
-
-   <!-- Integration test .csproj -->
-   <PackageReference Include="Testcontainers.PostgreSql" />
-   ```
-
-2. In `AppFixture.InitializeAsync`, start the dependency container and pass its connection string to the
-   app container as an environment variable (config keys map to `__`-delimited env vars):
-   ```csharp
-   private readonly PostgreSqlContainer _pg = new PostgreSqlBuilder().Build();
-
-   // in InitializeAsync, before building the app container:
-   await _pg.StartAsync();
-   // ...
-   .WithEnvironment("ConnectionStrings__Default", _pg.GetConnectionString())
-   ```
-
-Test execution is controlled by MSBuild properties:
-- `RunUnitTests=false` skips unit tests
-- `RunIntegrationTests=true` enables integration tests (disabled by default)
+To add a dependency (e.g. PostgreSQL), give the in-process host its connection string in
+`ApiFactory.ConfigureWebHost` (`builder.UseSetting("ConnectionStrings:Default", …)`), pointing at
+a per-run database or container, and pass the same setting as an env var in `api:image`.
 
 ## Running
 
@@ -120,11 +110,12 @@ controller reconciles it to this file and **pushing to `main` redeploys automati
 The pipeline shape:
 
 - **Production steps run in parallel** — `build-and-package` (Kaniko build → image tar + Helm chart)
-  and `code-test` (the unit suite). A test failure fails the group and **gates the deploy** (nothing
-  ships).
-- **Processing steps run sequentially** — `deploy-beta` (namespace `apps-beta`) → `deploy`
-  (namespace `apps`). **Beta gates prod**: if the beta rollout or its post-deploy health check fails,
-  prod never deploys.
+  and `check` (`mise run ci`: backend unit + in-process API tests, the client drift check, frontend
+  lint/test/build). A failure fails the group and **gates the deploy** (nothing ships).
+- **Processing steps run sequentially** — `deploy-beta` (namespace `apps-beta`) → `test-after-beta`
+  → `deploy` (namespace `apps`). **Beta gates prod**: if the beta rollout, its health check, or the
+  API test suite run against the live beta Service (in-cluster; token tests skip) fails, prod never
+  deploys.
 - **Secrets are by name only** (`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`); their values live in the
   pipeline's own k8s secret, never in the repo.
 - The step scripts source a shared [`olve-lib.sh`](https://github.com/OliverVea/Olve.Pipelines/blob/main/.pipelines/scripts/olve-lib.sh)
@@ -195,16 +186,16 @@ handlers. The `Stores/` module is written at library quality for later promotion
 
 ## Client Generation
 
-### C# ([Refitter](https://refitter.github.io/))
-
-The `clients/Olve.Template.Api.Client/` project generates a typed [Refit](https://github.com/reactiveui/refit) client from `api.json` at build time — just build the solution, no manual codegen step needed. A build target runs the [Refitter](https://refitter.github.io/) CLI (restored via `dotnet tool restore`) to emit the interface as `Generated/Output.cs`, which Refit's own source generator then turns into the client implementation. (Refit 12's `RestService.For<T>` requires that generated implementation, and Refit's generator can only consume a real source file — not the output of Refitter's source generator — hence the CLI step rather than `Refitter.SourceGenerator`.)
-
-### TypeScript ([Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview))
+The build writes the OpenAPI document to `artifacts/openapi/api.json` (gitignored). The frontend's
+TypeScript client is generated from it with [Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview)
+and **committed** in `frontend/src/api`, so neither the frontend nor the Docker build needs dotnet:
 
 ```bash
-dotnet tool restore
-dotnet kiota generate -l typescript -d api.json -c OlveTemplateApiClient -o clients/olve-template-api-client-ts/src -n OlveTemplateApi
+dotnet build && npm run --prefix frontend generate-client
 ```
+
+`mise run client:check` (part of `ci`) regenerates it and fails if it changed, so a stale client
+can't ship. There is no C# client: the API tests talk raw HTTP.
 
 ## Frontend
 
@@ -249,80 +240,20 @@ dotnet run tools/version.cs -- --ci --run-number 42 --rid linux-x64
 
 ## CI
 
-This template does not include a CI workflow — the actual workflow should live in the service's deployment repo. Below are examples to copy and adapt.
-
-### Example: PR workflow
-
-```yaml
-# .github/workflows/pr.yml
-name: PR
-
-on:
-  pull_request:
-    branches: [main]
-
-env:
-  DOTNET_VERSION: 10.0.100
-
-jobs:
-  build-and-test:
-    name: Build and test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      - run: dotnet restore
-      - run: dotnet build --no-restore -c Release
-      - run: dotnet test --no-restore --no-build -c Release
-      - run: dotnet test --no-restore --no-build -c Release -p:RunIntegrationTests=true -p:RunUnitTests=false
-```
-
-### Example: Push to main workflow
+The pipeline (`.pipelines/`) is the CI: its `check` step runs `mise run ci`. Anything else that
+wants the same gate (a GitHub Actions workflow, a pre-push hook) should run that one command too:
 
 ```yaml
-# .github/workflows/push-main.yml
-name: Push to main
-
-on:
-  push:
-    branches: [main]
-
-env:
-  DOTNET_VERSION: 10.0.100
-
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
 jobs:
-  build-and-test:
-    name: Build and test
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      - run: dotnet restore
-      - run: dotnet build --no-restore -c Release
-      - run: dotnet test --no-restore --no-build -c Release
-      - run: dotnet test --no-restore --no-build -c Release -p:RunIntegrationTests=true -p:RunUnitTests=false
-
-  version:
-    name: Compute version
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      artifact-name: ${{ steps.version.outputs.artifact-name }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      - name: Compute version
-        id: version
-        run: |
-          dotnet run tools/version.cs -- --ci --run-number ${{ github.run_number }} \
-            | tee -a "$GITHUB_OUTPUT"
+      - uses: jdx/mise-action@v2
+      - run: mise run ci
 ```
 
 ## Architecture & References
@@ -335,7 +266,7 @@ running instance/tooling, and the Claude Code skill that knows the model).
 | **Olve.Utilities** stack (Results, Validation, MinimalApi, Utilities) | Baked-in error handling, validation, result→HTTP mapping, `Id<T>`/`EntityStore<T>` primitives | [docs site](https://olivervea.github.io/Olve.Utilities/) | [OliverVea/Olve.Utilities](https://github.com/OliverVea/Olve.Utilities) | NuGet | *(none yet — gap)* |
 | **Olve.Pipelines** | GitOps CD — builds & deploys this repo via `.pipelines/` (see [Deployment](#deployment-gitops)) | in-repo `docs/setup/`, served at `/docs` + `llms.txt` | [OliverVea/Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines) | [`pipelines-private.ovea.pro`](https://pipelines-private.ovea.pro), beta `pipelines-beta.ovea.pro`, hooks `pipelines-hooks.ovea.pro`; **`pl` CLI** via `GET /download/{asset}` | `ovea-olve-pipelines` |
 | **Olve.Homelab** | Edge chart that owns all Ingress; public exposure is registered there, not in this chart | — | [OliverVea/Olve.Homelab](https://github.com/OliverVea/Olve.Homelab) | — | — |
-| **TUnit · Rocks · Refitter · Kiota** | Test framework, AOT mocking, C# & TS client generation | see per-library links below | — | — | — |
+| **TUnit · Rocks · Kiota · mise** | Test framework, AOT mocking, TS client generation, toolchain + tasks | see per-library links below | — | — | — |
 
 Per-library documentation:
 
@@ -345,5 +276,5 @@ Per-library documentation:
 - [Olve.Utilities](https://olivervea.github.io/Olve.Utilities/src/Olve.Utilities/README.html) — Meta-package bundling utility libraries including identifiers, collections, and graph types
 - [TUnit](https://tunit.dev/docs/intro) — Test framework (not xUnit/NUnit). Uses `await Assert.That(...)` fluent syntax
 - [Rocks](https://raw.githubusercontent.com/JasonBock/Rocks/refs/heads/main/docs/Overview.md) — Source-generated mocking library for AOT-compatible test doubles
-- [Refitter](https://refitter.github.io/articles/refitter-file-format.html) — Source generator for typed C# HTTP clients from OpenAPI specs via Refit
 - [Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview) — Microsoft's OpenAPI client generator for TypeScript (and other languages)
+- [mise](https://mise.jdx.dev/) — Toolchain pinning + task runner (`mise run ci`)

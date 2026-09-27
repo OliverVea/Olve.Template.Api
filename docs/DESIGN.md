@@ -34,6 +34,25 @@ template**, **GitOps (`.pipelines/`)**, and **documentation/references**.
 
 ---
 
+## Leanings (dated)
+
+Current leanings, not binding decisions: confirm before relying on one that predates your work.
+
+- **Borrow from Olve.AgentRuntimeManager in two steps (2026-09-27).** ARM grew out of this
+  template. Its workflow pieces are adopted now: mise as the single entry point (`mise run ci` is
+  the pipeline's `check`), generated output in gitignored `artifacts/`, one API test suite that
+  runs in-process or against a base URL (Docker image, live beta via `test-after-beta`), and
+  `docs/STANDARDS.md`. Its spec-first stack (TypeSpec contract, our own backend emitter, Hey API
+  clients) follows once ARM is further along, with the emitter extracted into its own package
+  rather than copied here.
+- **AOT stays for now, and goes with spec-first (2026-09-27).** AOT fits the no-reflection,
+  source-generators-first style, but it's too limiting to keep once the spec-first emitter lands
+  (ARM dropped it for the same reason). Until then `PublishAot` stays on and `mise run api:image`
+  plus `test-after-beta` are what catch AOT-only breakage.
+- **Kiota client stays committed until spec-first (2026-09-27).** The OpenAPI document comes
+  from the dotnet build, so moving the TS client to `artifacts/` would make the frontend and the
+  Docker build depend on dotnet. `mise run client:check` fails CI on drift instead.
+
 ## 1. Backend (BE)
 
 ### 1.1 Promote `EntityStore<T>` + `Event<T>` into Olve.Utilities
@@ -532,15 +551,16 @@ secrets, the self-deploy framing):
   config.yaml
   scripts/
     build.sh         # Kaniko build → stage image.tar + helm chart + version.txt
-    test.sh          # dotnet test (code-only), parallel to build, gates deploy
-    deploy-beta.sh   # import image, helm upgrade beta, health-gate prod
+    check.sh         # mise run ci, parallel to build, gates deploy
+    deploy-beta.sh   # import image, helm upgrade beta, health gate
+    test-after-beta.sh  # API tests against the live beta Service, gates prod
     deploy.sh        # helm upgrade prod
 ```
 
 `config.yaml` (generic):
 
-- `productionSteps`: `build-and-package` (kaniko) + `code-test` (dotnet sdk), in parallel
-- `processingSteps`: `deploy-beta` → `deploy` (beta gates prod, sequential)
+- `productionSteps`: `build-and-package` (kaniko) + `check` (dotnet sdk + mise), in parallel
+- `processingSteps`: `deploy-beta` → `test-after-beta` → `deploy` (beta gates prod, sequential)
 - `failureHandlers`: `aoe-triage` (built-in library handler, fires on any failure)
 - `secrets`: `GITHUB_TOKEN`, `SSH_PRIVATE_KEY` only (no MinIO/CLI secrets)
 
