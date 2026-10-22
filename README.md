@@ -112,8 +112,8 @@ service reconciles it from this file and **pushing to `main` deploys to beta, th
 
 The pipeline shape (stages run in order; steps in a stage run in parallel):
 
-1. `source` (the pushed commit) ∥ `mirror-base-images` (copies the Dockerfile's base images into
-   `registry.ovea.pro`; kaniko under gVisor stalls pulling from mcr.microsoft.com).
+1. `source` (the pushed commit). `build` pulls base images through the homelab pull-through caches
+   (the SDK's `imageBuild` default; kaniko under gVisor stalls pulling from mcr.microsoft.com).
 2. `build` (kaniko image) ∥ `test` (`mise run ci`: backend unit + in-process API tests, the client
    drift check, frontend lint/test/build).
 3. `deploy-beta` (Helm, namespace `apps-beta`, plus a health check) → `beta-test` (smoke test of the
