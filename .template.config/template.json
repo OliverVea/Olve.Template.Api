@@ -56,7 +56,8 @@
             "data/**",
             "**/node_modules/**",
             "frontend/dist/**",
-            "**/.kiota.log"
+            "**/.kiota.log",
+            ".pipelines/.olve/**"
           ]
         }
       ]
