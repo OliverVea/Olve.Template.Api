@@ -29,7 +29,7 @@ artifacts/                                      # Generated output (OpenAPI docu
 mise.toml                                       # Toolchain pins + tasks; `mise run ci` is the pipeline gate
 tools/version.cs                                # CalVer versioning script
 helm/                                           # Helm chart for Kubernetes (ClusterIP Service + SLO)
-.pipelines/                                     # Olve.Pipelines CD config (build + check, beta → test → prod)
+.pipelines/                                     # Olve.Pipelines CD pipeline (build ∥ test, beta → smoke test → prod)
 Dockerfile                                      # Multi-stage build (AOT, chiseled)
 Directory.Build.props                           # Shared build properties (TFM, nullable, etc.)
 Directory.Packages.props                        # Central package version management
@@ -77,13 +77,14 @@ dotnet test -p:RunApiTests=false     # Unit tests only
 (`ApiTarget`): in-process via `WebApplicationFactory` by default, or any running server when
 `API_BASE_URL` is set. To mint tokens against a base URL, also set `API_SIGNING_KEY`,
 `API_ISSUER` and `API_AUDIENCE` to the server's `Auth:*` settings; without them, tests that need a
-token skip. The same suite runs in the pipeline twice: in-process in `check`, and against live
-beta in `test-after-beta`.
+token skip. The pipeline's `test` step runs the suite in-process (`mise run ci`).
 
 In-process tests run JIT, so they can't catch what only breaks in the AOT-published binary (a
 missing `[JsonSerializable]`, reflection). `mise run api:image` builds the real image and runs the
-suite against it; run it when you touch serialization. `test-after-beta` covers the same ground
-for every deploy.
+suite against it; run it when you touch serialization. For every deploy, the pipeline's
+`beta-test` and `prod-test` smoke-test the deployed image (health, the messages API, the auth
+config, the SPA, a rejected anonymous write); `API_BASE_URL=… mise run api:remote` runs the full
+suite against a deployed server.
 
 To add a dependency (e.g. PostgreSQL), give the in-process host its connection string in
 `ApiFactory.ConfigureWebHost` (`builder.UseSetting("ConnectionStrings:Default", …)`), pointing at
@@ -102,32 +103,32 @@ helm install olve-template-api helm/
 ## Deployment (GitOps)
 
 This template ships a `.pipelines/` directory, which makes it deploy out of the box via
-[**Olve.Pipelines**](https://github.com/OliverVea/Olve.Pipelines) — Oliver's lightweight GitOps CD
-service. `.pipelines/config.yaml` is the **single source of truth** for how the app is built and
-deployed (the deploy equivalent of `.github/workflows/`): once a pipeline is bound to the repo, the
-controller reconciles it to this file and **pushing to `main` redeploys automatically**.
+[**Olve.Pipelines**](https://github.com/OliverVea/Olve.Pipelines) v2 — Oliver's GitOps CD service.
+`.pipelines/pipeline.ts` is the **single source of truth** for how the app is built and deployed,
+written in TypeScript against the `@olve/pipelines` SDK: once a pipeline is bound to the repo, the
+service reconciles it from this file and **pushing to `main` deploys to beta, then prod**.
 
-The pipeline shape:
+The pipeline shape (stages run in order; steps in a stage run in parallel):
 
-- **Production steps run in parallel** — `build-and-package` (Kaniko build → image tar + Helm chart)
-  and `check` (`mise run ci`: backend unit + in-process API tests, the client drift check, frontend
-  lint/test/build). A failure fails the group and **gates the deploy** (nothing ships).
-- **Processing steps run sequentially** — `deploy-beta` (namespace `apps-beta`) → `test-after-beta`
-  → `deploy` (namespace `apps`). **Beta gates prod**: if the beta rollout, its health check, or the
-  API test suite run against the live beta Service (in-cluster; token tests skip) fails, prod never
-  deploys.
-- **Secrets are by name only** (`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`); their values live in the
-  pipeline's own k8s secret, never in the repo.
-- The step scripts source a shared [`olve-lib.sh`](https://github.com/OliverVea/Olve.Pipelines/blob/main/.pipelines/scripts/olve-lib.sh)
-  (Kaniko/SSH/Helm footgun helpers) and only parameterize app-specifics, so they stay tiny. They
-  fetch it from `main`; swap that for a tag/SHA to pin.
+1. `source` (the pushed commit) ∥ `mirror-base-images` (copies the Dockerfile's base images into
+   `registry.ovea.pro`; kaniko under gVisor stalls pulling from mcr.microsoft.com).
+2. `build` (kaniko image) ∥ `test` (`mise run ci`: backend unit + in-process API tests, the client
+   drift check, frontend lint/test/build).
+3. `deploy-beta` (Helm, namespace `apps-beta`, plus a health check) → `beta-test` (smoke test of the
+   deployed beta over its in-cluster Service: `/health`, `/api/messages`, `/api/auth-config`, the
+   SPA bundle, and an anonymous write answering 401).
+4. `deploy-prod` (namespace `apps`) → `prod-test` (the same smoke test against prod).
+
+Any failure stops the run, so a broken beta never reaches prod. A manual run with
+`deployTo=beta` stops after beta. **Secrets are by name only** (`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`);
+their values live in the pipeline's own k8s secret, never in the repo. `config.yaml` is the paused
+v1 deployer, kept as a rollback path until v1 is removed.
 
 **Homelab conformance.** The Helm chart renders a **`ClusterIP` Service only — no Ingress**
 ([`Olve.Homelab`](https://github.com/OliverVea/Olve.Homelab) is the edge chart that owns all Ingress).
 Routing is registered by adding the app's host + service to the edge chart's `apps:` list in
-`values-{beta,prod}.yaml` — **not** in this chart. The `deploy-beta` health-gate probes the
-Tailscale-private host `https://<app>-private.ovea.pro/health` from the homelab node, so that host
-must be registered in the edge chart before the gate can pass.
+`values-{beta,prod}.yaml` — **not** in this chart. The pipeline's health checks and smoke tests use
+the in-cluster Service, so they don't depend on the route.
 
 ### Per-namespace prerequisites (what bites a fresh deploy)
 
@@ -135,8 +136,8 @@ Building and rolling out is automatic, but a generated app needs a few things pr
 target namespace before the pod actually runs. Each of these surfaced on a real deploy:
 
 - **Edge route** — add an entry to `Olve.Homelab`'s `values-{beta,prod}.yaml` `apps:` list (host
-  `<app>-private.ovea.pro`, external-dns target `100.100.117.17`, LE TLS). Without it the health
-  gate has nothing to probe.
+  `<app>-private.ovea.pro`, external-dns target `100.100.117.17`, LE TLS). Without it the app is
+  reachable only in-cluster.
 - **OTLP telemetry auth** — beta's `otel-beta.ovea.pro` is unauthenticated (Tailscale); prod's
   `otel.ovea.pro` needs OAuth2 as the shared `otel` client, whose secret is the
   `authentik-oidc-secrets` key **`otel-client-secret`**. (The chart defaults are correct; just
@@ -144,12 +145,13 @@ target namespace before the pod actually runs. Each of these surfaced on a real 
 - **Authentik CA** — the chiseled image can't validate `*.ovea.pro` TLS, so the chart mounts the
   shared `authentik-ca` configMap (`authentikCa.enabled`). That configMap must exist in the namespace.
 
-Inspect runs, jobs, and logs with the **`pl` CLI** (`pl pipeline list`, `pl job logs <id>`,
-`pl binding status <id>`). The [`ovea-olve-pipelines`](https://github.com/OliverVea/Olve.Pipelines)
-skill and the instance's `/docs` (served at
-[`pipelines-private.ovea.pro`](https://pipelines-private.ovea.pro), beta at `pipelines-beta.ovea.pro`)
-are the authoritative reference for the config schema, promotion gates, and the deploy model — start
-there rather than re-deriving it.
+Inspect runs and logs with the v2 **`pl` CLI** (`pl run list Olve.Template.Api`,
+`pl step logs Olve.Template.Api#<run>/<step>`, `pl binding status Olve.Template.Api`); run
+`pl dev describe` from the repo root to check a pipeline change locally. The
+[`ovea-olve-pipelines`](https://github.com/OliverVea/Olve.Pipelines) skill and the instance's
+`/docs` ([`pipelines-v2-private.ovea.pro`](https://pipelines-v2-private.ovea.pro/docs)) are the
+authoritative reference for the SDK, triggers, gates and the deploy model — start there rather than
+re-deriving it.
 
 ## Configuration
 
@@ -240,7 +242,7 @@ dotnet run tools/version.cs -- --ci --run-number 42 --rid linux-x64
 
 ## CI
 
-The pipeline (`.pipelines/`) is the CI: its `check` step runs `mise run ci`. Anything else that
+The pipeline (`.pipelines/`) is the CI: its `test` step runs `mise run ci`. Anything else that
 wants the same gate (a GitHub Actions workflow, a pre-push hook) should run that one command too:
 
 ```yaml
@@ -264,7 +266,7 @@ running instance/tooling, and the Claude Code skill that knows the model).
 | Component | Role in the template | Docs | GitHub | Instance / tooling | Skill |
 |---|---|---|---|---|---|
 | **Olve.Utilities** stack (Results, Validation, MinimalApi, Utilities) | Baked-in error handling, validation, result→HTTP mapping, `Id<T>`/`EntityStore<T>` primitives | [docs site](https://olivervea.github.io/Olve.Utilities/) | [OliverVea/Olve.Utilities](https://github.com/OliverVea/Olve.Utilities) | NuGet | *(none yet — gap)* |
-| **Olve.Pipelines** | GitOps CD — builds & deploys this repo via `.pipelines/` (see [Deployment](#deployment-gitops)) | in-repo `docs/setup/`, served at `/docs` + `llms.txt` | [OliverVea/Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines) | [`pipelines-private.ovea.pro`](https://pipelines-private.ovea.pro), beta `pipelines-beta.ovea.pro`, hooks `pipelines-hooks.ovea.pro`; **`pl` CLI** via `GET /download/{asset}` | `ovea-olve-pipelines` |
+| **Olve.Pipelines** | GitOps CD — builds & deploys this repo via `.pipelines/` (see [Deployment](#deployment-gitops)) | in-repo `docs/setup/`, served at `/docs` + `llms.txt` | [OliverVea/Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines) | v2: [`pipelines-v2-private.ovea.pro`](https://pipelines-v2-private.ovea.pro) (v1: `pipelines-private.ovea.pro`); **`pl` CLI** via `GET /install.sh` | `ovea-olve-pipelines` |
 | **Olve.Homelab** | Edge chart that owns all Ingress; public exposure is registered there, not in this chart | — | [OliverVea/Olve.Homelab](https://github.com/OliverVea/Olve.Homelab) | — | — |
 | **TUnit · Rocks · Kiota · mise** | Test framework, AOT mocking, TS client generation, toolchain + tasks | see per-library links below | — | — | — |
 

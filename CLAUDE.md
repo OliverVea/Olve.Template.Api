@@ -35,13 +35,16 @@ still holds. When a leaning changes, rewrite the entry and its date.
 
 ## Deployment (GitOps)
 
-This repo deploys via **Olve.Pipelines** — the `.pipelines/` directory is the live deploy config
-(single source of truth; pushing to `main` redeploys). Build + `check` (`mise run ci`) run in
-parallel and gate `deploy-beta` → `test-after-beta` (API tests against beta) → `deploy` (beta gates
-prod). The Helm chart is **ClusterIP-only**; public exposure is registered in the `Olve.Homelab`
-edge chart, not here. **Invoke the `ovea-olve-pipelines` skill** for
-the authoritative model (config schema, secrets, promotion gates) before changing `.pipelines/` —
-don't re-derive it. See [README.md](README.md#deployment-gitops) for the full write-up.
+This repo deploys via **Olve.Pipelines v2** — `.pipelines/pipeline.ts` (TypeScript, `@olve/pipelines`
+SDK) is the live deploy pipeline (single source of truth; pushing to `main` deploys). `source` ∥
+`mirror-base-images` → `build` (kaniko) ∥ `test` (`mise run ci`) → `deploy-beta` → `beta-test` (smoke
+test over the in-cluster Service) → `deploy-prod` → `prod-test`; any failure stops the run before
+prod. `config.yaml` beside it is the paused v1 deployer (rollback path; don't edit it). Keep
+`mirror-base-images`' list in sync with the Dockerfile's `FROM`s. The Helm chart is **ClusterIP-only**;
+public exposure is registered in the `Olve.Homelab` edge chart, not here. **Invoke the
+`ovea-olve-pipelines` skill** for the authoritative model (SDK, secrets, gates) before changing
+`.pipelines/` — don't re-derive it; check changes with `pl dev describe`. See
+[README.md](README.md#deployment-gitops) for the full write-up.
 
 **Homelab deploy gotchas** (each bit us on a real deploy; all validated against Olve.Pipelines):
 
@@ -54,7 +57,7 @@ don't re-derive it. See [README.md](README.md#deployment-gitops) for the full wr
   shared `authentik-ca` configMap via `authentikCa.enabled` (`auth-prod-ca.crt`/`auth-beta-ca.crt`).
 - **Routing.** No route exists until the app is added to `Olve.Homelab`'s `values-{beta,prod}.yaml`
   `apps:` list. Private/Tailscale host is `<app>-private.ovea.pro` (external-dns → `100.100.117.17`);
-  the `deploy-beta` health gate probes it from the homelab node over SSH.
+  the pipeline's health checks use the in-cluster Service instead.
 - **Telemetry auth is opt-in, never fatal** — empty OAuth2 config disables it (see `TelemetryConfiguration`).
 
 ## References
@@ -65,7 +68,7 @@ don't re-derive it. See [README.md](README.md#deployment-gitops) for the full wr
   - [Olve.MinimalApi](https://olivervea.github.io/Olve.Utilities/src/Olve.MinimalApi/README.html) — result-to-HTTP mapping for minimal APIs
   - [Olve.Utilities](https://olivervea.github.io/Olve.Utilities/src/Olve.Utilities/README.html) — identifiers, collections, graph types
   - [Olve.Results.TUnit](https://olivervea.github.io/Olve.Utilities/src/Olve.Results.TUnit/README.html) — TUnit assertions for Result types (`Succeeded()`, `Failed()`, etc.)
-- [Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines) — GitOps CD service; deploy model for this repo's `.pipelines/`. Skill: `ovea-olve-pipelines`. Instances: `pipelines-private.ovea.pro` (prod), `pipelines-beta.ovea.pro` (beta)
+- [Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines) — GitOps CD service; deploy model for this repo's `.pipelines/`. Skill: `ovea-olve-pipelines`. This repo is on v2 prod: `pipelines-v2-private.ovea.pro`
 - [Olve.Homelab](https://github.com/OliverVea/Olve.Homelab) — edge chart that owns all Ingress; register an app's public host + service here, not in the app chart
 - [mise](https://mise.jdx.dev/) — toolchain pinning + task runner (`mise run ci`)
 - [TUnit](https://tunit.dev/docs/intro) — test framework, uses `await Assert.That(...)` fluent syntax (not xUnit/NUnit)
