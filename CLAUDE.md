@@ -35,7 +35,7 @@ still holds. When a leaning changes, rewrite the entry and its date.
 
 ## Deployment (GitOps)
 
-This repo deploys via **Olve.Pipelines v2** — `.pipelines/pipeline.ts` (TypeScript, `@olve/pipelines`
+This repo deploys via **Olve.Pipelines v2** — `.pipelines/pipeline.ts` (TypeScript, `@olivervea/pipelines`
 SDK) is the live deploy pipeline (single source of truth; pushing to `main` deploys). `source` →
 `build` (kaniko) ∥ `test` (`mise run ci`) → `deploy-beta` → `beta-test` (smoke
 test over the in-cluster Service) → `deploy-prod` → `prod-test`; any failure stops the run before

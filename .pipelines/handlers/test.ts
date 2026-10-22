@@ -1,4 +1,4 @@
-import { implement } from "@olve/pipelines";
+import { implement } from "@olivervea/pipelines";
 import { test } from "../pipeline";
 import { installMise, miseRun } from "./lib/mise";
 

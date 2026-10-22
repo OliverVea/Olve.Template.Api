@@ -1,4 +1,4 @@
-import type { Ctx } from "@olve/pipelines";
+import type { Ctx } from "@olivervea/pipelines";
 
 const BETA_TOKEN_URL = "https://auth-beta.ovea.pro/application/o/token/";
 const BETA_TEST_CLIENT_ID = "olve-template-api-tests";

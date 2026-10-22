@@ -1,10 +1,13 @@
 // Every push goes beta, then prod. config.yaml beside it is the paused v1 deployer's rollback path.
-import { pipeline, secret, step, steps, HelmRelease, Source } from "@olve/pipelines";
+import { pipeline, secret, step, steps, HelmRelease, Source } from "@olivervea/pipelines";
 import * as M from "./models";
 
 export const GITHUB_TOKEN = secret("GITHUB_TOKEN", "GitHub read token used to fetch the repo tarball.");
 export const SSH_PRIVATE_KEY = secret("SSH_PRIVATE_KEY", "SSH key for importing the image and running helm on the homelab host.");
 export const API_TEST_CLIENT_SECRET = secret("API_TEST_CLIENT_SECRET", "Client secret of beta Authentik's olve-template-api-tests machine client.");
+
+// The chart's SLO needs the sloth CRD, which the cluster doesn't have.
+const CHART_SET = { "slo.enabled": "false" };
 
 export const source = steps.gitHubSource({
   name: "source",
@@ -36,7 +39,7 @@ export const deployBeta = steps.helmDeployOverSsh({
   namespace: "apps-beta",
   chart: "helm",
   values: ["values-beta.yaml"],
-  set: { "slo.enabled": "false" },
+  set: CHART_SET,
   healthUrl: "http://olve-template-api.apps-beta.svc.cluster.local/health",
   timeoutSeconds: 900,
 });
@@ -58,7 +61,7 @@ export const deployProd = steps.helmDeployOverSsh({
   release: "olve-template-api",
   namespace: "apps",
   chart: "helm",
-  set: { "slo.enabled": "false" },
+  set: CHART_SET,
   healthUrl: "http://olve-template-api.apps.svc.cluster.local/health",
   timeoutSeconds: 900,
 });

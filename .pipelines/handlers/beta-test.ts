@@ -1,8 +1,8 @@
-import { implement } from "@olve/pipelines";
+import { checkSpa, implement, serviceUrl } from "@olivervea/pipelines";
 import { betaTest } from "../pipeline";
 import { betaTestToken } from "./lib/auth";
 import { installMise, miseRun } from "./lib/mise";
-import { checkSpa, serviceUrl, waitHealthy } from "./lib/smoke";
+import { waitHealthy } from "./lib/smoke";
 
 // The suite writes (and deletes) messages, so it runs against beta only.
 export default implement(betaTest, async ({ source, release }, ctx) => {

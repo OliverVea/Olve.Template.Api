@@ -107,7 +107,7 @@ helm install olve-template-api helm/
 This template ships a `.pipelines/` directory, which makes it deploy out of the box via
 [**Olve.Pipelines**](https://github.com/OliverVea/Olve.Pipelines) v2 — Oliver's GitOps CD service.
 `.pipelines/pipeline.ts` is the **single source of truth** for how the app is built and deployed,
-written in TypeScript against the `@olve/pipelines` SDK: once a pipeline is bound to the repo, the
+written in TypeScript against the `@olivervea/pipelines` SDK: once a pipeline is bound to the repo, the
 service reconciles it from this file and **pushing to `main` deploys to beta, then prod**.
 
 The pipeline shape (stages run in order; steps in a stage run in parallel):

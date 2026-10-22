@@ -1,22 +1,11 @@
-import { httpHealthCheck, type Ctx, type HelmRelease, type Infer } from "@olve/pipelines";
+import { checkSpa, httpHealthCheck, serviceUrl, type Ctx, type HelmRelease, type Infer } from "@olivervea/pipelines";
 
 function check(ok: boolean, what: string): asserts ok {
   if (!ok) throw new Error(`smoke test: ${what}`);
 }
 
-export const serviceUrl = ({ release, namespace }: Infer<typeof HelmRelease>) =>
-  `http://${release}.${namespace}.svc.cluster.local`;
-
 export const waitHealthy = (ctx: Ctx, url: string) =>
   httpHealthCheck(ctx, `${url}/health`, { attempts: 6, delaySeconds: 5 });
-
-export async function checkSpa(ctx: Ctx, url: string) {
-  const html = await (await ctx.http.expectOk(`${url}/`)).text();
-  const bundle = html.match(/src="(\/assets\/[^"]+\.js)"/)?.[1];
-  check(bundle !== undefined, "/ does not reference the SPA bundle");
-  const js = await ctx.http.expectOk(`${url}${bundle}`);
-  check(js.headers.get("content-type")?.includes("javascript") ?? false, `${bundle} is not served as JavaScript`);
-}
 
 // Read-only (plus one rejected write), so it is safe against prod.
 export async function smokeTest(ctx: Ctx, release: Infer<typeof HelmRelease>) {
