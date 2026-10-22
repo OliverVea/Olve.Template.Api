@@ -3,16 +3,34 @@ using System.Net;
 namespace Olve.Template.Api.ApiTests;
 
 // Tests share one server (and, on a base-URL target, a live one), so they only assert on the
-// messages they create themselves: never on counts or on the seeded welcome message.
+// messages they create themselves: never on counts or on the seeded welcome message. Each test
+// deletes what it created, so a live target doesn't fill up.
 [ClassDataSource<ApiTarget>(Shared = SharedType.PerTestSession)]
 public class MessageTests(ApiTarget target)
 {
+    private readonly List<Guid> _created = [];
+
+    [After(Test)]
+    public async Task DeleteCreatedMessages()
+    {
+        if (_created.Count == 0)
+        {
+            return;
+        }
+
+        using var client = target.CreateAuthenticatedClient();
+        foreach (var id in _created)
+        {
+            using var _ = await client.DeleteAsync($"/api/messages/{id}");
+        }
+    }
+
     [Test]
     public async Task CreateMessage_Authenticated_ReturnsCreatedMessage()
     {
         using var client = target.CreateAuthenticatedClient();
 
-        var created = await (await client.PostJsonAsync("/api/messages", new { text = "hello" })).ReadAsync<MessageBody>();
+        var created = await CreateAsync(client, "hello");
 
         await Assert.That(created.Text).IsEqualTo("hello");
         await Assert.That(created.Id).IsNotEqualTo(Guid.Empty);
@@ -52,7 +70,7 @@ public class MessageTests(ApiTarget target)
     public async Task GetMessages_AfterCreate_IncludesCreatedMessage()
     {
         using var client = target.CreateAuthenticatedClient();
-        var created = await (await client.PostJsonAsync("/api/messages", new { text = "find-me" })).ReadAsync<MessageBody>();
+        var created = await CreateAsync(client, "find-me");
 
         var found = await FindAsync(client, created.Id);
 
@@ -63,7 +81,7 @@ public class MessageTests(ApiTarget target)
     public async Task UpdateMessage_ExistingMessage_ChangesText()
     {
         using var client = target.CreateAuthenticatedClient();
-        var created = await (await client.PostJsonAsync("/api/messages", new { text = "before" })).ReadAsync<MessageBody>();
+        var created = await CreateAsync(client, "before");
 
         var updated = await (await client.PutJsonAsync($"/api/messages/{created.Id}", new { text = "after" })).ReadAsync<MessageBody>();
 
@@ -75,7 +93,7 @@ public class MessageTests(ApiTarget target)
     public async Task DeleteMessage_ExistingMessage_RemovesIt()
     {
         using var client = target.CreateAuthenticatedClient();
-        var created = await (await client.PostJsonAsync("/api/messages", new { text = "delete-me" })).ReadAsync<MessageBody>();
+        var created = await CreateAsync(client, "delete-me");
 
         using var deleted = await client.DeleteAsync($"/api/messages/{created.Id}");
 
@@ -101,6 +119,13 @@ public class MessageTests(ApiTarget target)
         using var response = await client.PutJsonAsync($"/api/messages/{Guid.NewGuid()}", new { text = "nobody home" });
 
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+    }
+
+    private async Task<MessageBody> CreateAsync(HttpClient client, string text)
+    {
+        var created = await (await client.PostJsonAsync("/api/messages", new { text })).ReadAsync<MessageBody>();
+        _created.Add(created.Id);
+        return created;
     }
 
     // Pages through the whole list: on a shared server the message may not be on the first page.

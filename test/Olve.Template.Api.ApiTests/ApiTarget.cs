@@ -10,8 +10,9 @@ namespace Olve.Template.Api.ApiTests;
 ///   <c>check</c> step run.</item>
 ///   <item>base-URL mode: when <c>API_BASE_URL</c> is set, any running server (a local
 ///   <c>dotnet run</c>, the Docker image via <c>mise run api:image</c>, live beta via
-///   <c>test-after-beta</c>). To mint tokens it needs the server's <c>API_SIGNING_KEY</c>,
-///   <c>API_ISSUER</c> and <c>API_AUDIENCE</c>; without them, tests that need a token are skipped.</item>
+///   <c>beta-test</c>). Authenticated tests use <c>API_TOKEN</c> as the bearer token when set (beta:
+///   a real Authentik token), else mint one with the server's <c>API_SIGNING_KEY</c>,
+///   <c>API_ISSUER</c> and <c>API_AUDIENCE</c>; with neither, tests that need a token are skipped.</item>
 /// </list>
 /// </summary>
 public sealed class ApiTarget : IAsyncInitializer, IAsyncDisposable
@@ -20,8 +21,11 @@ public sealed class ApiTarget : IAsyncInitializer, IAsyncDisposable
     public const string SigningKeyVariable = "API_SIGNING_KEY";
     public const string IssuerVariable = "API_ISSUER";
     public const string AudienceVariable = "API_AUDIENCE";
+    public const string TokenVariable = "API_TOKEN";
 
     private readonly Uri? _baseUrl = Environment.GetEnvironmentVariable(BaseUrlVariable) is { Length: > 0 } url ? new Uri(url) : null;
+    private readonly string? _token = Environment.GetEnvironmentVariable(BaseUrlVariable) is { Length: > 0 }
+        && Environment.GetEnvironmentVariable(TokenVariable) is { Length: > 0 } token ? token : null;
     private readonly Lock _clients = new();
     private ApiFactory? _factory;
 
@@ -64,14 +68,14 @@ public sealed class ApiTarget : IAsyncInitializer, IAsyncDisposable
         }
     }
 
-    /// <summary>A client with a valid bearer token; skips the calling test if none can be minted.</summary>
+    /// <summary>A client with a valid bearer token; skips the calling test if there is none.</summary>
     public HttpClient CreateAuthenticatedClient()
     {
-        Skip.When(Tokens is null,
-            $"Needs {SigningKeyVariable}, {IssuerVariable} and {AudienceVariable} (the target's Auth settings) to mint a token.");
+        Skip.When(_token is null && Tokens is null,
+            $"Needs {TokenVariable}, or {SigningKeyVariable}, {IssuerVariable} and {AudienceVariable} (the target's Auth settings) to mint a token.");
 
         var client = CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Tokens!.Mint());
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token ?? Tokens!.Mint());
         return client;
     }
 

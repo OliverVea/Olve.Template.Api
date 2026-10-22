@@ -75,16 +75,18 @@ dotnet test -p:RunApiTests=false     # Unit tests only
 
 **API tests** (`test/Olve.Template.Api.ApiTests`) are one HTTP suite with a selectable target
 (`ApiTarget`): in-process via `WebApplicationFactory` by default, or any running server when
-`API_BASE_URL` is set. To mint tokens against a base URL, also set `API_SIGNING_KEY`,
-`API_ISSUER` and `API_AUDIENCE` to the server's `Auth:*` settings; without them, tests that need a
-token skip. The pipeline's `test` step runs the suite in-process (`mise run ci`).
+`API_BASE_URL` is set. Against a base URL, authenticated tests send `API_TOKEN` as the bearer
+token, or mint one when `API_SIGNING_KEY`, `API_ISSUER` and `API_AUDIENCE` are set to the server's
+`Auth:*` settings; with neither, tests that need a token skip. The pipeline's `test` step runs the
+suite in-process (`mise run ci`); `beta-test` runs it against beta with a token from beta
+Authentik's `olve-template-api-tests` machine client.
 
 In-process tests run JIT, so they can't catch what only breaks in the AOT-published binary (a
 missing `[JsonSerializable]`, reflection). `mise run api:image` builds the real image and runs the
 suite against it; run it when you touch serialization. For every deploy, the pipeline's
-`beta-test` and `prod-test` smoke-test the deployed image (health, the messages API, the auth
-config, the SPA, a rejected anonymous write); `API_BASE_URL=… mise run api:remote` runs the full
-suite against a deployed server.
+`beta-test` runs the whole suite against the deployed image on beta and `prod-test` smoke-tests
+prod read-only (health, the messages API, the auth config, the SPA, a rejected anonymous write);
+`API_BASE_URL=… mise run api:remote` runs the full suite against any deployed server.
 
 To add a dependency (e.g. PostgreSQL), give the in-process host its connection string in
 `ApiFactory.ConfigureWebHost` (`builder.UseSetting("ConnectionStrings:Default", …)`), pointing at

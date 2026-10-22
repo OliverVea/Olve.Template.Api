@@ -64,7 +64,7 @@ API_BASE_URL="$url" API_SIGNING_KEY="$key" API_ISSUER=api-test API_AUDIENCE=api-
 """
 
 [tasks."api:remote"]
-description = "API tests against a deployed server: set API_BASE_URL (tests needing a token skip unless API_SIGNING_KEY/ISSUER/AUDIENCE are set)"
+description = "API tests against a deployed server: set API_BASE_URL (tests needing a token skip unless API_TOKEN or API_SIGNING_KEY/ISSUER/AUDIENCE are set)"
 run = """
 #!/usr/bin/env bash
 set -euo pipefail

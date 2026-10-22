@@ -4,6 +4,7 @@ import * as M from "./models";
 
 export const GITHUB_TOKEN = secret("GITHUB_TOKEN", "GitHub read token used to fetch the repo tarball.");
 export const SSH_PRIVATE_KEY = secret("SSH_PRIVATE_KEY", "SSH key for importing the image and running helm on the homelab host.");
+export const API_TEST_CLIENT_SECRET = secret("API_TEST_CLIENT_SECRET", "Client secret of beta Authentik's olve-template-api-tests machine client.");
 
 export const source = steps.gitHubSource({
   name: "source",
@@ -52,9 +53,10 @@ export const deployBeta = steps.helmDeployOverSsh({
 
 export const betaTest = step({
   name: "beta-test",
-  description: "Runs the whole API test suite (`mise run api:remote`) against beta in-cluster and checks the SPA is served; token-dependent tests skip.",
+  description: "Runs the whole API test suite (`mise run api:remote`) against beta in-cluster, with a token from beta Authentik, and checks the SPA is served.",
   image: "mcr.microsoft.com/dotnet/sdk:10.0-noble",
   input: { source: Source, release: HelmRelease },
+  secrets: [API_TEST_CLIENT_SECRET],
   timeoutSeconds: 900,
 });
 
