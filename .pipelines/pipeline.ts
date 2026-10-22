@@ -52,10 +52,10 @@ export const deployBeta = steps.helmDeployOverSsh({
 
 export const betaTest = step({
   name: "beta-test",
-  description: "Smoke-tests beta in-cluster: health, the messages API, the auth config, the SPA and that writes need a token.",
-  image: "alpine:3.22",
-  input: { release: HelmRelease },
-  timeoutSeconds: 180,
+  description: "Runs the whole API test suite (`mise run api:remote`) against beta in-cluster and checks the SPA is served; token-dependent tests skip.",
+  image: "mcr.microsoft.com/dotnet/sdk:10.0-noble",
+  input: { source: Source, release: HelmRelease },
+  timeoutSeconds: 900,
 });
 
 export const deployProd = steps.helmDeployOverSsh({
@@ -73,7 +73,7 @@ export const deployProd = steps.helmDeployOverSsh({
 
 export const prodTest = step({
   name: "prod-test",
-  description: "Runs the beta smoke test against prod.",
+  description: "Read-only smoke test of prod: health, the messages API, the auth config, the SPA and that writes need a token.",
   image: "alpine:3.22",
   input: { release: HelmRelease },
   timeoutSeconds: 180,
@@ -81,7 +81,7 @@ export const prodTest = step({
 
 export default pipeline({
   name: "Olve.Template.Api",
-  description: "Build with kaniko and run `mise run ci`, deploy to apps-beta with Helm and smoke-test it, then deploy the same image to apps and smoke-test that. deployTo=beta stops after beta.",
+  description: "Build with kaniko and run `mise run ci`, deploy to apps-beta with Helm and run the API test suite against it, then deploy the same image to apps and smoke-test that read-only. deployTo=beta stops after beta.",
   input: M.DeployRequest,
 })
   .onPush(e => ({ repo: e.repository.full_name, sha: e.after, deployTo: "prod" }))
