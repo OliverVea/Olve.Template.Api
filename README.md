@@ -116,15 +116,16 @@ The pipeline shape (stages run in order; steps in a stage run in parallel):
    (the SDK's `imageBuild` default; kaniko under gVisor stalls pulling from mcr.microsoft.com).
 2. `build` (kaniko image) ∥ `test` (`mise run ci`: backend unit + in-process API tests, the client
    drift check, frontend lint/test/build).
-3. `deploy-beta` (Helm, namespace `apps-beta`, plus a health check) → `beta-test` (smoke test of the
-   deployed beta over its in-cluster Service: `/health`, `/api/messages`, `/api/auth-config`, the
-   SPA bundle, and an anonymous write answering 401).
-4. `deploy-prod` (namespace `apps`) → `prod-test` (the same smoke test against prod).
+3. `deploy-beta` (Helm, namespace `apps-beta`, plus a health check) → `beta-test` (the whole API
+   test suite, `mise run api:remote`, against beta's in-cluster Service with a token from beta
+   Authentik, and a check that the SPA is served).
+4. `deploy-prod` (namespace `apps`) → `prod-test` (read-only smoke test: `/health`,
+   `/api/messages`, `/api/auth-config`, the SPA, and an anonymous write answering 401).
 
 Any failure stops the run, so a broken beta never reaches prod. A manual run with
-`deployTo=beta` stops after beta. **Secrets are by name only** (`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`);
-their values live in the pipeline's own k8s secret, never in the repo. `config.yaml` is the paused
-v1 deployer, kept as a rollback path until v1 is removed.
+`deployTo=beta` stops after beta. **Secrets are by name only** (`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`,
+`API_TEST_CLIENT_SECRET`); their values are set with `pl secret set` and live in the pipeline's own
+k8s secret, never in the repo.
 
 **Homelab conformance.** The Helm chart renders a **`ClusterIP` Service only — no Ingress**
 ([`Olve.Homelab`](https://github.com/OliverVea/Olve.Homelab) is the edge chart that owns all Ingress).

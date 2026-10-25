@@ -37,9 +37,9 @@ still holds. When a leaning changes, rewrite the entry and its date.
 
 This repo deploys via **Olve.Pipelines v2** — `.pipelines/pipeline.ts` (TypeScript, `@olivervea/pipelines`
 SDK) is the live deploy pipeline (single source of truth; pushing to `main` deploys). `source` →
-`build` (kaniko) ∥ `test` (`mise run ci`) → `deploy-beta` → `beta-test` (smoke
-test over the in-cluster Service) → `deploy-prod` → `prod-test`; any failure stops the run before
-prod. `config.yaml` beside it is the paused v1 deployer (rollback path; don't edit it). The Helm chart is **ClusterIP-only**;
+`build` (kaniko) ∥ `test` (`mise run ci`) → `deploy-beta` → `beta-test` (the API test suite
+against beta's in-cluster Service) → `deploy-prod` → `prod-test` (read-only smoke test); any
+failure stops the run before prod. The Helm chart is **ClusterIP-only**;
 public exposure is registered in the `Olve.Homelab` edge chart, not here. **Invoke the
 `ovea-olve-pipelines` skill** for the authoritative model (SDK, secrets, gates) before changing
 `.pipelines/` — don't re-derive it; check changes with `pl dev describe`. See
