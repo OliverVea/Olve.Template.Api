@@ -8,37 +8,21 @@ dotnet = "10.0.200"
 # `mise run ci` is exactly what the pipeline's `check` step runs.
 
 [tasks.install]
-description = "Restore dotnet tools and install frontend dependencies (lockfile)"
-run = ["dotnet tool restore", "npm ci --prefix frontend"]
+description = "Restore dotnet tools and install the contract's and frontend's dependencies (lockfiles)"
+run = ["dotnet tool restore", "npm ci --prefix src/spec", "npm ci --prefix frontend"]
 
 [tasks."backend:test"]
 description = "Backend build + unit and API tests (API tests in-process)"
 run = ["dotnet build", "dotnet test"]
 
-# The Kiota client is committed (frontend/src/api) so the frontend and the Docker build need no
-# dotnet. This regenerates it from the OpenAPI document the build writes to artifacts/openapi and
-# fails if the code changed; locally, the regenerated files are left in place to commit.
-# kiota-lock.json is left out: its descriptionHash follows every spec change (even the title a
-# `dotnet new` rename touches) without the generated code changing.
-[tasks."client:check"]
-description = "Regenerate the TS client and fail if the committed one has drifted from the API"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-dotnet build src/Olve.Template.Api
-before=$(mktemp -d)
-trap 'rm -rf "$before"' EXIT
-cp -r frontend/src/api/. "$before"
-npm run --prefix frontend generate-client >/dev/null
-rm -f frontend/src/api/.kiota.log
-if ! diff -r -x kiota-lock.json -x .kiota.log "$before" frontend/src/api; then
-  echo "frontend/src/api is out of date with the API: commit the regenerated client." >&2
-  exit 1
-fi
-"""
+# The contract's OpenAPI document and the frontend's Hey API client, both under artifacts/.
+[tasks.client]
+description = "Compile the contract and generate the TS client"
+dir = "src/spec"
+run = "npm run build"
 
-# DELETE-WITH-THE-FRONTEND: a headless service that removes frontend/ deletes this task,
-# client:check, their entries in `ci`, and the npm half of `install`.
+# DELETE-WITH-THE-FRONTEND: a headless service that removes frontend/ deletes this task, `client`,
+# their entries in `ci`, and frontend's half of `install`.
 [tasks."frontend:check"]
 description = "Frontend lint, tests, production build"
 dir = "frontend"
@@ -77,6 +61,6 @@ description = "Everything the pipeline gate runs"
 run = [
   { task = "install" },
   { task = "backend:test" },
-  { task = "client:check" },
+  { task = "client" },
   { task = "frontend:check" },
 ]

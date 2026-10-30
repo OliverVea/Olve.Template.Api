@@ -12,16 +12,7 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "generate-client": "cd .. && dotnet tool run kiota generate -l typescript -d artifacts/openapi/api.json -c OlveTemplateApiClient -o frontend/src/api -n OlveTemplateApi --clean-output"
-  },
-  "dependencies": {
-    "@microsoft/kiota-abstractions": "1.0.0-preview.106",
-    "@microsoft/kiota-http-fetchlibrary": "1.0.0-preview.106",
-    "@microsoft/kiota-serialization-form": "1.0.0-preview.106",
-    "@microsoft/kiota-serialization-json": "1.0.0-preview.106",
-    "@microsoft/kiota-serialization-multipart": "1.0.0-preview.106",
-    "@microsoft/kiota-serialization-text": "1.0.0-preview.106"
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",

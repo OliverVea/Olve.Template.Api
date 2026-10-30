@@ -1,13 +1,5 @@
-import {
-  AnonymousAuthenticationProvider,
-  type AuthenticationProvider,
-  type RequestInformation,
-} from "@microsoft/kiota-abstractions";
-import { FetchRequestAdapter, HttpClient } from "@microsoft/kiota-http-fetchlibrary";
-import {
-  createOlveTemplateApiClient,
-  type OlveTemplateApiClient,
-} from "./api/olveTemplateApiClient.js";
+import { type Client, createClient as createApiClient, createConfig } from "@api/client";
+import type { Problem } from "@api/index";
 
 /** Supplies the current bearer token (async — it may refresh), or nullish for anonymous. */
 export type TokenSource = () => Promise<string | null | undefined>;
@@ -15,54 +7,59 @@ export type TokenSource = () => Promise<string | null | undefined>;
 /** Called on a 401: refresh the credential and return a new token, or null to give up. */
 export type UnauthorizedHandler = () => Promise<string | null>;
 
-/**
- * Attaches `Authorization: Bearer <token>` when a token is available, and nothing otherwise — so
- * anonymous `GET /api/messages` keeps working while authenticated writes get a token the moment
- * one is provided. The token getter is async so it can refresh a near-expiry token just in time.
- */
-class BearerTokenAuthenticationProvider implements AuthenticationProvider {
-  constructor(private readonly getToken: TokenSource) {}
+export type ApiClient = Client;
 
-  public authenticateRequest = async (request: RequestInformation): Promise<void> => {
-    const token = await this.getToken();
-    if (token) {
-      request.headers.tryAdd("Authorization", `Bearer ${token}`);
-    }
-  };
+/** A non-2xx answer: its status and the contract's problems. */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly problems: Problem[],
+  ) {
+    super(problems[0]?.message ?? `Request failed (${status}).`);
+  }
+}
+
+/** The body of a generated SDK call's result, or an {@link ApiError}. */
+export async function unwrap<T>(
+  call: Promise<{ data?: T; error?: unknown; response?: Response }>,
+): Promise<T> {
+  const { data, error, response } = await call;
+  if (error !== undefined || !response?.ok) {
+    throw new ApiError(response?.status ?? 0, Array.isArray(error) ? error : []);
+  }
+  return data as T;
 }
 
 /**
- * Build the Kiota client. Pass `getToken` to enable authenticated writes; `onUnauthorized` adds a
+ * Build the client. `getToken` attaches `Authorization: Bearer <token>` when a token is available,
+ * and nothing otherwise, so anonymous `GET /api/messages` keeps working. `onUnauthorized` adds a
  * 401 → refresh → retry-once safety net (for the rare case a token is revoked or expires between
  * the proactive refresh and the request). Omit both for a purely anonymous client.
  */
 export function createClient(
   baseUrl: string,
-  opts: { getToken?: TokenSource; onUnauthorized?: UnauthorizedHandler } = {},
-): OlveTemplateApiClient {
-  const { getToken, onUnauthorized } = opts;
+  opts: {
+    getToken?: TokenSource;
+    onUnauthorized?: UnauthorizedHandler;
+    fetch?: typeof fetch;
+  } = {},
+): ApiClient {
+  const { getToken, onUnauthorized, fetch: send = (...args) => fetch(...args) } = opts;
 
-  const authProvider: AuthenticationProvider = getToken
-    ? new BearerTokenAuthenticationProvider(getToken)
-    : new AnonymousAuthenticationProvider();
+  const authFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const request = new Request(input, init);
+    const replay = onUnauthorized ? request.clone() : null;
+    const token = await getToken?.();
+    if (token) request.headers.set("Authorization", `Bearer ${token}`);
 
-  // Terminal fetch: on a 401, refresh once and replay the request with the new bearer. Default
-  // Kiota middleware (retry/redirect) still wraps this — it just calls us as the final send.
-  const authFetch = async (url: string, init: RequestInit): Promise<Response> => {
-    let response = await fetch(url, init);
-    if (response.status === 401 && onUnauthorized) {
-      const fresh = await onUnauthorized();
-      if (fresh) {
-        const headers = new Headers(init.headers);
-        headers.set("Authorization", `Bearer ${fresh}`);
-        response = await fetch(url, { ...init, headers });
-      }
-    }
-    return response;
+    const response = await send(request);
+    if (response.status !== 401 || !replay || !onUnauthorized) return response;
+
+    const fresh = await onUnauthorized();
+    if (!fresh) return response;
+    replay.headers.set("Authorization", `Bearer ${fresh}`);
+    return send(replay);
   };
 
-  const httpClient = new HttpClient(authFetch);
-  const adapter = new FetchRequestAdapter(authProvider, undefined, undefined, httpClient);
-  adapter.baseUrl = baseUrl;
-  return createOlveTemplateApiClient(adapter);
+  return createApiClient(createConfig({ baseUrl, fetch: authFetch }));
 }

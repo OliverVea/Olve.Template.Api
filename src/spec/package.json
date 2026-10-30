@@ -1,0 +1,20 @@
+{
+  "name": "olve-template-api-spec",
+  "private": true,
+  "type": "module",
+  "description": "The API contract (TypeSpec): tsp compile writes artifacts/spec/openapi.json and the service's generated C#; openapi-ts writes the frontend's client.",
+  "scripts": {
+    "compile": "tsp compile main.tsp",
+    "client": "openapi-ts -f openapi-ts.config.mjs",
+    "build": "npm run compile && npm run client"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.99.0",
+    "@olivervea/typespec-csharp": "0.61.0",
+    "@typespec/compiler": "1.16.0",
+    "@typespec/http": "1.16.0",
+    "@typespec/openapi": "1.16.0",
+    "@typespec/openapi3": "1.16.0",
+    "typescript": "5.9.3"
+  }
+}

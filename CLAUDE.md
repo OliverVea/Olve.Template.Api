@@ -12,7 +12,7 @@ dotnet run --project src/Olve.Template.Api                  # Run locally
 ```
 
 `mise run ci` (or `npx mise run ci` without mise installed) is the pipeline gate: backend tests,
-client drift check, frontend. `mise run api:image` runs the API tests against the Docker image
+the contract's client, frontend. `mise run api:image` runs the API tests against the Docker image
 (the AOT check; needs Docker), `API_BASE_URL=… mise run api:remote` against any running server.
 
 ## Conventions
@@ -20,7 +20,7 @@ client drift check, frontend. `mise run api:image` runs the API tests against th
 - .NET 10, C# with file-scoped namespaces, nullable enabled, implicit usings
 - Package versions managed centrally in `Directory.Packages.props` — do not add `Version` attributes in csproj files
 - Local config via `dotnet user-secrets`, not appsettings files
-- OpenAPI spec is generated on build into `artifacts/openapi/api.json` (gitignored) by `Microsoft.Extensions.ApiDescription.Server`; generated output never goes in source folders, except the committed Kiota client in `frontend/src/api` (kept honest by `mise run client:check`)
+- The API is the TypeSpec contract in `src/spec/`: the build compiles it into `artifacts/` (gitignored: the C# surface, the OpenAPI document, the Hey API client). Nothing generated is committed. An API change is a change to the contract and the `[OperationHandler]` class behind the operation; a missing handler fails the build
 - API tests are raw HTTP behaviour tests that must pass against any target (`ApiTarget`); no C# client
 
 ## Standards
@@ -64,7 +64,7 @@ public exposure is registered in the `Olve.Homelab` edge chart, not here. **Invo
 - [Olve.* packages](https://olivervea.github.io/Olve.Utilities/) ([GitHub](https://github.com/OliverVea/Olve.Utilities)) — index of all Olve packages
   - [Olve.Results](https://olivervea.github.io/Olve.Utilities/src/Olve.Results/README.html) — non-throwing result types for error handling
   - [Olve.Validation](https://olivervea.github.io/Olve.Utilities/src/Olve.Validation/README.html) — input validation built on Olve.Results
-  - [Olve.MinimalApi](https://olivervea.github.io/Olve.Utilities/src/Olve.MinimalApi/README.html) — result-to-HTTP mapping for minimal APIs
+  - [Olve.TypeSpec](https://github.com/OliverVea/Olve.Utilities/tree/master/src/Olve.TypeSpec) — runtime and MSBuild targets of the generated API surface
   - [Olve.Utilities](https://olivervea.github.io/Olve.Utilities/src/Olve.Utilities/README.html) — identifiers, collections, graph types
   - [Olve.Results.TUnit](https://olivervea.github.io/Olve.Utilities/src/Olve.Results.TUnit/README.html) — TUnit assertions for Result types (`Succeeded()`, `Failed()`, etc.)
 - [Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines) — GitOps CD service; deploy model for this repo's `.pipelines/`. Skill: `ovea-olve-pipelines`. This repo is on v2 prod: `pipelines-v2-private.ovea.pro`
@@ -72,4 +72,4 @@ public exposure is registered in the `Olve.Homelab` edge chart, not here. **Invo
 - [mise](https://mise.jdx.dev/) — toolchain pinning + task runner (`mise run ci`)
 - [TUnit](https://tunit.dev/docs/intro) — test framework, uses `await Assert.That(...)` fluent syntax (not xUnit/NUnit)
 - [Rocks](https://raw.githubusercontent.com/JasonBock/Rocks/refs/heads/main/docs/Overview.md) — source-generated mocking (AOT-compatible)
-- [Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview) — TypeScript client gen from OpenAPI
+- [TypeSpec](https://typespec.io) — the API contract; [Hey API](https://heyapi.dev) — the TypeScript client generated from its OpenAPI

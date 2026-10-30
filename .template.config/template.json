@@ -52,11 +52,9 @@
             "TestResults/**",
             "docs/DESIGN.md",
             "artifacts/**",
-            "clients/**",
             "data/**",
             "**/node_modules/**",
             "frontend/dist/**",
-            "**/.kiota.log",
             ".pipelines/.olve/**"
           ]
         }

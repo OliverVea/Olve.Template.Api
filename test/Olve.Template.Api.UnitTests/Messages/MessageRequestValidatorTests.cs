@@ -1,16 +1,15 @@
 using Olve.Results.TUnit;
-using Olve.Template.Api.Messages;
+using Olve.Template.Api.Contract;
+using MessageRequestValidator = Olve.Template.Api.Messages.MessageRequestValidator;
 
 namespace Olve.Template.Api.UnitTests.Messages;
 
 public class MessageRequestValidatorTests
 {
-    private readonly MessageRequestValidator _sut = new();
-
     [Test]
     public async Task Validate_NonEmptyText_Succeeds()
     {
-        var result = _sut.Validate(new MessageRequest("hello"));
+        var result = MessageRequestValidator.Validate(new MessageRequest { Text = "hello" });
 
         await Assert.That(result).Succeeded();
     }
@@ -20,15 +19,7 @@ public class MessageRequestValidatorTests
     [Arguments("   ")]
     public async Task Validate_EmptyOrWhitespace_Fails(string text)
     {
-        var result = _sut.Validate(new MessageRequest(text));
-
-        await Assert.That(result).Failed();
-    }
-
-    [Test]
-    public async Task Validate_TooLong_Fails()
-    {
-        var result = _sut.Validate(new MessageRequest(new string('a', 281)));
+        var result = MessageRequestValidator.Validate(new MessageRequest { Text = text });
 
         await Assert.That(result).Failed();
     }

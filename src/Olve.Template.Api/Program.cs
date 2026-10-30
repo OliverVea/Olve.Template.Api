@@ -1,5 +1,4 @@
 using Olve.Template.Api.Configuration;
-using Olve.Template.Api.Health;
 using Olve.Template.Api.Messages;
 using Olve.Utilities.AsyncOnStartup;
 using Olve.Utilities.Stores;
@@ -7,9 +6,9 @@ using Olve.Utilities.Stores;
 var builder = WebApplication.CreateSlimBuilder(args);
 
 builder.ConfigureHost(args);
-builder.ConfigureJson();
 builder.ConfigureAuthentication();
 builder.ConfigureTelemetry();
+builder.Services.AddApi();
 builder.Services.AddMessageServices(builder.Configuration);
 
 var app = builder.Build();
@@ -25,14 +24,8 @@ EventDispatch.OnHandlerException = ex => eventLogger.LogError(ex, "A store event
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapJson();
 app.MapAuthentication();
-app.MapHealthEndpoints();
-
-// The JSON API lives under /api/ so the SPA can own the site root (/, /index.html, assets).
-var api = app.MapGroup("/api");
-api.MapMessageEndpoints();
-api.MapFrontendConfig();
+app.MapApi();
 
 // SPA client-side routing: any unmatched non-API GET returns index.html so deep links work.
 app.MapFallbackToFile("index.html").AllowAnonymous();

@@ -7,7 +7,7 @@ template**, **GitOps (`.pipelines/`)**, and **documentation/references**.
 ## Goals & principles
 
 - **Opinionated by design — about practices and own tooling.** This is a personal
-  template: it deliberately bakes in the Olve.* stack (Results, Validation, MinimalApi,
+  template: it deliberately bakes in the Olve.* stack (Results, Validation, TypeSpec,
   Utilities, the promoted `EntityStore`) and Oliver's best-practices defaults (minimal
   API + `Configuration/` pattern, Result-based error handling, JWT/OIDC, OTLP telemetry,
   AOT). Those opinions are the point; a new service inherits them on purpose.
@@ -45,13 +45,12 @@ Current leanings, not binding decisions: confirm before relying on one that pred
   `docs/STANDARDS.md`. Its spec-first stack (TypeSpec contract, our own backend emitter, Hey API
   clients) follows once ARM is further along, with the emitter extracted into its own package
   rather than copied here.
-- **AOT stays for now, and goes with spec-first (2026-09-27).** AOT fits the no-reflection,
-  source-generators-first style, but it's too limiting to keep once the spec-first emitter lands
-  (ARM dropped it for the same reason). Until then `PublishAot` stays on and `mise run api:image`
-  plus `test-after-beta` are what catch AOT-only breakage.
-- **Kiota client stays committed until spec-first (2026-09-27).** The OpenAPI document comes
-  from the dotnet build, so moving the TS client to `artifacts/` would make the frontend and the
-  Docker build depend on dotnet. `mise run client:check` fails CI on drift instead.
+- **AOT stays with spec-first (2026-10-30).** The generated surface is source-generated too, so
+  `PublishAot` stays on; `mise run api:image` plus `test-after-beta` are what catch AOT-only
+  breakage.
+- **Nothing generated is committed (2026-10-30).** The contract compiles without dotnet, so the
+  Dockerfile's `spec` stage emits the C# surface, the OpenAPI document and the TS client into
+  `artifacts/` for the stages after it, and the build compiles them with `-p:SkipSpecGen=true`.
 
 ## 1. Backend (BE)
 
@@ -376,10 +375,9 @@ small feature that exercises the promoted store and the underused primitives:
 
 - `Message` record implements `IHasId<Id<Message>>` → **`Id<T>`** showcased
 - backed by **`EntityStore<Message>`** (singleton) → store showcased
-- `GET /messages` returns **`PaginatedResult<Message>`** → pagination showcased
-- `POST/PUT/DELETE` go through an **`IHandler<TReq,TResp>`** with
-  **`.WithValidation<TReq,TValidator>()`** → the underused Olve.MinimalApi handler +
-  validation-filter pattern showcased
+- `GET /api/messages` returns a **`MessagePage`** → pagination showcased
+- every operation is a contract operation with one **`[OperationHandler]`** class, and the
+  contract's constraints validate request bodies → the spec-first pattern showcased
 - registration wired via **`IAsyncOnStartup`** (the packaged equivalent of the
   bespoke `IRunOnStartup` pattern admired in Pipelines)
 
@@ -490,15 +488,15 @@ this conversion as a ~per-component, ~10-minute mechanical step — not a global
 ### 2.4 First real component
 
 A `<message-list>` CRUD view backed by the BE `Message` feature, consuming a
-**Kiota-generated TypeScript client** (the same generation path already proven in
-Pipelines' frontend and offered by the backend template). This proves the
+**TypeScript client generated from the contract with Hey API** (the same generation path
+as Pipelines' frontend). This proves the
 client-gen → component → API loop end-to-end.
 
 ### 2.5 Reference points in the existing repos
 
 - `QuestionBank/packages/client/` — Vite + **vanilla TypeScript** SPA (closest to the
   no-framework stance; hand-written `fetch`).
-- `Olve.Pipelines/frontend/` — Lit + Vite consuming a Kiota TS client (the
+- `Olve.Pipelines/src/frontend/` — Lit + Vite consuming a Hey API client (the
   generated-client wiring to copy; Lit usage to make optional).
 
 ### 2.6 Open questions — resolved
@@ -506,7 +504,7 @@ client-gen → component → API loop end-to-end.
 - ~~Separate repo vs. opt-in folder in this template?~~ **Resolved: an in-repo `frontend/`
   folder** (not a separate `Olve.Template.Web` repo).
 - ~~TypeScript vs. plain JS for the vanilla baseline?~~ **Resolved: vanilla TypeScript**
-  (Vite build), overriding the plain-JS recommendation below — chosen so the Kiota client is
+  (Vite build), overriding the plain-JS recommendation below — chosen so the generated client is
   consumed with full types. The litify-later and no-auto-rerender stances are unchanged.
 - ~~Where does the SPA get served?~~ **Resolved: same-origin from the API.** The Dockerfile
   builds `frontend/dist` into the app's `wwwroot`; the API serves the SPA at `/` (with an
@@ -610,9 +608,9 @@ Per-component: what it is, where it's used in the template, and the full set of 
 
 | Component | Docs | GitHub | Instance / tooling | Skill |
 |---|---|---|---|---|
-| Olve.Utilities (Results, Validation, MinimalApi, Utilities) | `olivervea.github.io/Olve.Utilities/` | `github.com/OliverVea/Olve.Utilities` | NuGet | *(none yet — gap)* |
+| Olve.Utilities (Results, Validation, TypeSpec, Utilities) | `olivervea.github.io/Olve.Utilities/` | `github.com/OliverVea/Olve.Utilities` | NuGet | *(none yet — gap)* |
 | Olve.Pipelines (CD/GitOps) | in-repo `docs/setup/` (served at `/docs`, `llms.txt`) | `github.com/OliverVea/Olve.Pipelines` | beta `pipelines-beta.ovea.pro`, prod-private `pipelines-private.ovea.pro`, hooks `pipelines-hooks.ovea.pro`; **`pl` CLI** via instance `GET /download/{asset}` | `ovea-olve-pipelines` |
-| TUnit / Rocks / Refitter / Kiota | existing links | — | — | — |
+| TUnit / Rocks / Hey API | existing links | — | — | — |
 
 ### 4.3 Document the `.pipelines/` feature
 

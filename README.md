@@ -1,6 +1,6 @@
 # Olve.Template.Api
 
-A .NET 10 minimal API service template. Install with `dotnet new` and scaffold a full solution with auth, telemetry, Helm chart, and client generation.
+A .NET 10 spec-first minimal API service template. Install with `dotnet new` and scaffold a full solution with auth, telemetry, Helm chart, and client generation.
 
 ## Usage
 
@@ -15,8 +15,9 @@ dotnet new olve-api -n "MyCompany.MyService"
 ## Project Structure
 
 ```
+src/spec/                                       # The API contract (TypeSpec), one .tsp per area
 src/Olve.Template.Api/                          # API application (minimal API)
-├── Configuration/                              # Auth, telemetry, JSON, host config
+├── Configuration/                              # Auth, telemetry, host config, API wiring
 ├── Messages/                                   # Message CRUD example feature
 ├── Stores/                                     # EntityStore snapshot persistence (promotion-shaped)
 ├── Health/                                     # Health check endpoints
@@ -25,7 +26,7 @@ test/Olve.Template.Api.UnitTests/               # Unit tests (TUnit + Rocks)
 test/Olve.Template.Api.ApiTests/                # API tests over HTTP (in-process or any base URL)
 frontend/                                       # Vanilla Web Components + TS frontend (see frontend/README.md)
 docs/STANDARDS.md                               # MUST/SHOULD rules for API behaviour, code and tests
-artifacts/                                      # Generated output (OpenAPI document), gitignored
+artifacts/                                      # Generated output (C# surface, OpenAPI document, TS client), gitignored
 mise.toml                                       # Toolchain pins + tasks; `mise run ci` is the pipeline gate
 tools/version.cs                                # CalVer versioning script
 helm/                                           # Helm chart for Kubernetes (ClusterIP Service + SLO)
@@ -52,7 +53,7 @@ The JSON API lives under `/api/` so the SPA can own the site root; `/health` sta
 for Kubernetes probes. Unmatched non-API GETs fall back to `index.html` for SPA client routing.
 
 The `Messages` feature is the template's worked example — it exercises `Id<T>`, an
-`EntityStore<Message>`, `Page<T>` pagination, the `IHandler` + `.WithValidation(...)` pattern, and
+`EntityStore<Message>`, page pagination, one `[OperationHandler]` class per contract operation, and
 `IAsyncOnStartup` wiring (a welcome message is seeded on first run).
 
 ## Build & Test
@@ -64,7 +65,7 @@ same tasks for you, Claude and the pipeline. Each task delegates to the native b
 ```bash
 mise run ci              # Everything the pipeline's check step runs
 mise run backend:test    # dotnet build + dotnet test (unit + in-process API tests)
-mise run client:check    # Regenerate the TS client; fail if the committed one drifted
+mise run client          # Compile the contract and generate the TS client into artifacts/
 mise run frontend:check  # Frontend lint, tests, production build
 mise run api:image       # API tests against the real Docker image (needs Docker)
 API_BASE_URL=https://… mise run api:remote   # API tests against a deployed server
@@ -114,8 +115,8 @@ The pipeline shape (stages run in order; steps in a stage run in parallel):
 
 1. `source` (the pushed commit). `build` pulls base images through the homelab pull-through caches
    (the SDK's `imageBuild` default; kaniko under gVisor stalls pulling from mcr.microsoft.com).
-2. `build` (kaniko image) ∥ `test` (`mise run ci`: backend unit + in-process API tests, the client
-   drift check, frontend lint/test/build).
+2. `build` (kaniko image) ∥ `test` (`mise run ci`: backend unit + in-process API tests, the
+   contract's client, frontend lint/test/build).
 3. `deploy-beta` (Helm, namespace `apps-beta`, plus a health check) → `beta-test` (smoke test of the
    deployed beta over its in-cluster Service: `/health`, `/api/messages`, `/api/auth-config`, the
    SPA bundle, and an anonymous write answering 401).
@@ -181,30 +182,35 @@ Sources in priority order (highest wins):
 The `Messages` feature is backed by an in-memory `EntityStore<Message>`. By default storage is
 `Ephemeral` (state is lost on restart). Set `Storage:Mode=Persistent` to have the store load on
 startup and save a debounced whole-snapshot JSON to `Storage:Directory` via the BCL-only
-`FileSnapshotStore` — both wired in `Messages/MessageEndpoints.cs`.
+`FileSnapshotStore` — both wired in `Messages/MessageServices.cs`.
 
 Everything sits behind the `ISnapshotStore` seam (`Stores/`), so the persistence ladder — in-memory →
 file → S3/MinIO → relational — is a one-line swap at registration without touching the store or
 handlers. The `Stores/` module is written at library quality for later promotion to
 `Olve.Utilities.Hosting`.
 
-## Client Generation
+## The Contract
 
-The build writes the OpenAPI document to `artifacts/openapi/api.json` (gitignored). The frontend's
-TypeScript client is generated from it with [Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview)
-and **committed** in `frontend/src/api`, so neither the frontend nor the Docker build needs dotnet:
+The API is the TypeSpec contract in `src/spec/` (one `.tsp` per area). The build compiles it into
+`artifacts/`: the C# surface (`Contract` namespace: models, response unions, handler interfaces,
+routes, validators, JSON context) and the OpenAPI document, which the service serves at
+`/openapi/v1.json` from its published `wwwroot`. `<TypeSpecContract>` in the csproj runs the compile;
+`npm ci` runs there the first time, so a plain `dotnet build` needs node.
 
-```bash
-dotnet build && npm run --prefix frontend generate-client
-```
+An API change is a change to the contract and the handler behind the operation: one
+`[OperationHandler]` class per operation, implementing the generated `I<Group><Op>Handler` and
+returning a variant of its response union. A missing handler fails the build. `AddApi` and `MapApi`
+in `Configuration/ApiConfiguration.cs` wire them, and `MapApi` opens the anonymous routes.
 
-`mise run client:check` (part of `ci`) regenerates it and fails if it changed, so a stale client
-can't ship. There is no C# client: the API tests talk raw HTTP.
+`mise run client` also generates the frontend's TypeScript client with
+[Hey API](https://heyapi.dev) into `artifacts/clients/ts`, which the frontend imports as `@api/*`.
+Nothing generated is committed, so nothing can drift. There is no C# client: the API tests talk raw
+HTTP.
 
 ## Frontend
 
 `frontend/` is the template's companion UI: a no-framework, **vanilla Web Components** app in
-**TypeScript**, consuming the API through its own Kiota-generated client. It ships a
+**TypeScript**, consuming the API through a client generated from the contract. It ships a
 `<message-list>` CRUD view over the backend `Message` feature, proving the client-gen →
 component → API loop end to end.
 
@@ -222,7 +228,7 @@ cd frontend && npm install && npm run dev    # proxies /api to the API (VITE_API
 ```
 
 See [`frontend/README.md`](frontend/README.md) for the layout, run/build commands, auth for
-writes, and how to regenerate the client (including the Kiota-runtime version pin).
+writes, and how the client is generated.
 
 ## Versioning
 
@@ -267,18 +273,19 @@ running instance/tooling, and the Claude Code skill that knows the model).
 
 | Component | Role in the template | Docs | GitHub | Instance / tooling | Skill |
 |---|---|---|---|---|---|
-| **Olve.Utilities** stack (Results, Validation, MinimalApi, Utilities) | Baked-in error handling, validation, result→HTTP mapping, `Id<T>`/`EntityStore<T>` primitives | [docs site](https://olivervea.github.io/Olve.Utilities/) | [OliverVea/Olve.Utilities](https://github.com/OliverVea/Olve.Utilities) | NuGet | *(none yet — gap)* |
+| **Olve.Utilities** stack (Results, Validation, TypeSpec, Utilities) | Baked-in error handling, validation, the generated API surface, `Id<T>`/`EntityStore<T>` primitives | [docs site](https://olivervea.github.io/Olve.Utilities/) | [OliverVea/Olve.Utilities](https://github.com/OliverVea/Olve.Utilities) | NuGet | *(none yet — gap)* |
 | **Olve.Pipelines** | GitOps CD — builds & deploys this repo via `.pipelines/` (see [Deployment](#deployment-gitops)) | in-repo `docs/setup/`, served at `/docs` + `llms.txt` | [OliverVea/Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines) | v2: [`pipelines-v2-private.ovea.pro`](https://pipelines-v2-private.ovea.pro) (v1: `pipelines-private.ovea.pro`); **`pl` CLI** via `GET /install.sh` | `ovea-olve-pipelines` |
 | **Olve.Homelab** | Edge chart that owns all Ingress; public exposure is registered there, not in this chart | — | [OliverVea/Olve.Homelab](https://github.com/OliverVea/Olve.Homelab) | — | — |
-| **TUnit · Rocks · Kiota · mise** | Test framework, AOT mocking, TS client generation, toolchain + tasks | see per-library links below | — | — | — |
+| **TUnit · Rocks · Hey API · mise** | Test framework, AOT mocking, TS client generation, toolchain + tasks | see per-library links below | — | — | — |
 
 Per-library documentation:
 
-- [Olve.MinimalApi](https://olivervea.github.io/Olve.Utilities/src/Olve.MinimalApi/README.html) — Minimal API extensions for result mapping, validation, and JSON conversion
+- [Olve.TypeSpec](https://github.com/OliverVea/Olve.Utilities/tree/master/src/Olve.TypeSpec) — Runtime and MSBuild targets for the C# surface `@olivervea/typespec-csharp` generates from the contract
 - [Olve.Results](https://olivervea.github.io/Olve.Utilities/src/Olve.Results/README.html) — Functional result types for non-throwing error handling
 - [Olve.Validation](https://olivervea.github.io/Olve.Utilities/src/Olve.Validation/README.html) — Fluent input validation built on Olve.Results
 - [Olve.Utilities](https://olivervea.github.io/Olve.Utilities/src/Olve.Utilities/README.html) — Meta-package bundling utility libraries including identifiers, collections, and graph types
 - [TUnit](https://tunit.dev/docs/intro) — Test framework (not xUnit/NUnit). Uses `await Assert.That(...)` fluent syntax
 - [Rocks](https://raw.githubusercontent.com/JasonBock/Rocks/refs/heads/main/docs/Overview.md) — Source-generated mocking library for AOT-compatible test doubles
-- [Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview) — Microsoft's OpenAPI client generator for TypeScript (and other languages)
+- [TypeSpec](https://typespec.io) — The API contract language
+- [Hey API](https://heyapi.dev) — TypeScript client generator for the contract's OpenAPI document
 - [mise](https://mise.jdx.dev/) — Toolchain pinning + task runner (`mise run ci`)

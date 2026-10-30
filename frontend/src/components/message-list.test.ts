@@ -1,35 +1,25 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { OlveTemplateApiClient } from "../api/olveTemplateApiClient.js";
+import { createClient } from "../api-client.js";
 import { MessageList } from "./message-list.js";
 
-/**
- * A minimal fake of the Kiota client — MessageList only touches `api.messages.get/post/byId`,
- * so we stub exactly those and cast.
- */
-function fakeClient(overrides: {
-  get?: () => Promise<unknown>;
-  post?: (body: unknown) => Promise<unknown>;
-  put?: (body: unknown) => Promise<unknown>;
-  del?: () => Promise<unknown>;
-}) {
-  const put = vi.fn(overrides.put ?? (async () => ({})));
-  const del = vi.fn(overrides.del ?? (async () => new ArrayBuffer(0)));
-  const messages = {
-    get: vi.fn(overrides.get ?? (async () => ({ items: [], totalCount: 0, hasNextPage: false }))),
-    post: vi.fn(overrides.post ?? (async () => ({}))),
-    byId: vi.fn(() => ({ put, delete: del })),
-  };
-  const client = { api: { messages } };
-  return {
-    client: client as unknown as OlveTemplateApiClient,
-    spies: {
-      get: messages.get,
-      post: messages.post,
-      byId: messages.byId,
-      put,
-      del,
-    },
-  };
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+
+const emptyPage = { items: [], totalCount: 0, hasNextPage: false };
+
+/** A real client over a faked fetch: `answer` gets each request, GET defaults to an empty page. */
+function fakeClient(answer?: (request: Request) => Response | undefined) {
+  const requests: Request[] = [];
+  const send = vi.fn(async (input: RequestInfo | URL) => {
+    const request = input as Request;
+    requests.push(request.clone());
+    return answer?.(request) ?? json(request.method === "GET" ? emptyPage : {});
+  });
+  const client = createClient("http://api.test", { fetch: send as typeof fetch });
+  return { client, requests, gets: () => requests.filter((r) => r.method === "GET").length };
 }
 
 beforeAll(() => customElements.define(MessageList.tagName, MessageList));
@@ -40,8 +30,8 @@ function make(): MessageList {
 
 describe("<message-list>", () => {
   it("renders the messages the client returns, with a count", async () => {
-    const { client } = fakeClient({
-      get: async () => ({
+    const { client } = fakeClient(() =>
+      json({
         items: [
           { id: "aaaaaaaa-0000", text: "hello" },
           { id: "bbbbbbbb-1111", text: "world" },
@@ -49,7 +39,7 @@ describe("<message-list>", () => {
         totalCount: 2,
         hasNextPage: false,
       }),
-    });
+    );
 
     const el = make();
     el.client = client;
@@ -62,46 +52,56 @@ describe("<message-list>", () => {
 
   it("shows the empty state when there are no messages", async () => {
     const el = make();
-    el.client = fakeClient({}).client;
+    el.client = fakeClient().client;
     await el.load();
     expect(el.shadowRoot!.querySelector(".muted")?.textContent).toMatch(/No messages yet/);
   });
 
   it("surfaces an auth-specific error on 401", async () => {
     const el = make();
-    el.client = fakeClient({
-      get: async () => {
-        throw { responseStatusCode: 401 };
-      },
-    }).client;
+    el.client = fakeClient(() => new Response(null, { status: 401 })).client;
     await el.load();
     expect(el.shadowRoot!.querySelector(".error")?.textContent).toMatch(/Authentication required/);
   });
 
-  it("create() posts the body then reloads", async () => {
-    const { client, spies } = fakeClient({});
+  it("surfaces the contract's problem message", async () => {
+    const { client } = fakeClient((r) =>
+      r.method === "POST" ? json([{ message: "'text' cannot be empty." }], 400) : undefined,
+    );
     const el = make();
     el.client = client;
     await el.load();
-    spies.get.mockClear();
+
+    await el.create("x");
+
+    expect(el.shadowRoot!.querySelector(".error")?.textContent).toContain("cannot be empty");
+  });
+
+  it("create() posts the body then reloads", async () => {
+    const { client, requests, gets } = fakeClient();
+    const el = make();
+    el.client = client;
+    await el.load();
+    const before = gets();
 
     await el.create("new message");
 
-    expect(spies.post).toHaveBeenCalledWith({ text: "new message" });
-    expect(spies.get).toHaveBeenCalledTimes(1); // reloaded after the write
+    const post = requests.find((r) => r.method === "POST");
+    expect(await post?.json()).toEqual({ text: "new message" });
+    expect(gets()).toBe(before + 1); // reloaded after the write
   });
 
   it("deleteMessage() deletes by id then reloads", async () => {
-    const { client, spies } = fakeClient({});
+    const { client, requests, gets } = fakeClient();
     const el = make();
     el.client = client;
     await el.load();
-    spies.get.mockClear();
+    const before = gets();
 
     await el.deleteMessage("aaaaaaaa-0000");
 
-    expect(spies.byId).toHaveBeenCalledWith("aaaaaaaa-0000");
-    expect(spies.del).toHaveBeenCalledTimes(1);
-    expect(spies.get).toHaveBeenCalledTimes(1);
+    const del = requests.find((r) => r.method === "DELETE");
+    expect(del?.url).toContain("/api/messages/aaaaaaaa-0000");
+    expect(gets()).toBe(before + 1);
   });
 });

@@ -1,12 +1,18 @@
-import type { Message } from "../api/models/index.js";
-import type { OlveTemplateApiClient } from "../api/olveTemplateApiClient.js";
+import {
+  type Message,
+  messagesCreate,
+  messagesDelete,
+  messagesList,
+  messagesUpdate,
+} from "@api/index";
+import { type ApiClient, ApiError, unwrap } from "../api-client.js";
 import { BaseElement, escapeHtml } from "../base-element.js";
 
 type Status = "idle" | "loading" | "ready" | "error";
 
 /**
  * `<message-list>` — the template's first real component (DESIGN §2.4): a CRUD view over
- * the backend `Message` feature, driven entirely by the Kiota-generated TypeScript client.
+ * the backend `Message` feature, driven entirely by the TypeScript client generated from the contract.
  * Proves the client-gen → component → live-API loop end to end.
  *
  * Every state transition (load, create, edit, delete, page change) ends by calling
@@ -15,7 +21,7 @@ type Status = "idle" | "loading" | "ready" | "error";
 export class MessageList extends BaseElement {
   static readonly tagName = "message-list";
 
-  #client: OlveTemplateApiClient | null = null;
+  #client: ApiClient | null = null;
 
   // --- view state ---
   #messages: Message[] = [];
@@ -27,8 +33,8 @@ export class MessageList extends BaseElement {
   #hasNextPage = false;
   #editingId: string | null = null;
 
-  /** The Kiota client. Setting it (re)loads the first page if the element is connected. */
-  set client(value: OlveTemplateApiClient) {
+  /** The API client. Setting it (re)loads the first page if the element is connected. */
+  set client(value: ApiClient) {
     this.#client = value;
     if (this.isConnected) void this.load();
   }
@@ -46,12 +52,15 @@ export class MessageList extends BaseElement {
     this.#error = "";
     this.render();
     try {
-      const page = await this.#client.api.messages.get({
-        queryParameters: { page: this.#page, pageSize: this.#pageSize },
-      });
-      this.#messages = page?.items ?? [];
-      this.#totalCount = page?.totalCount ?? 0;
-      this.#hasNextPage = page?.hasNextPage ?? false;
+      const page = await unwrap(
+        messagesList({
+          client: this.#client,
+          query: { page: this.#page, pageSize: this.#pageSize },
+        }),
+      );
+      this.#messages = page.items;
+      this.#totalCount = page.totalCount;
+      this.#hasNextPage = page.hasNextPage;
       this.#status = "ready";
     } catch (error) {
       this.#status = "error";
@@ -63,7 +72,7 @@ export class MessageList extends BaseElement {
   async create(text: string): Promise<void> {
     if (!this.#client || !text.trim()) return;
     try {
-      await this.#client.api.messages.post({ text });
+      await unwrap(messagesCreate({ client: this.#client, body: { text } }));
       this.#page = 1;
       await this.load();
     } catch (error) {
@@ -75,7 +84,7 @@ export class MessageList extends BaseElement {
   async saveEdit(id: string, text: string): Promise<void> {
     if (!this.#client || !text.trim()) return;
     try {
-      await this.#client.api.messages.byId(id).put({ text });
+      await unwrap(messagesUpdate({ client: this.#client, path: { id }, body: { text } }));
       this.#editingId = null;
       await this.load();
     } catch (error) {
@@ -87,7 +96,7 @@ export class MessageList extends BaseElement {
   async deleteMessage(id: string): Promise<void> {
     if (!this.#client) return;
     try {
-      await this.#client.api.messages.byId(id).delete();
+      await unwrap(messagesDelete({ client: this.#client, path: { id } }));
       await this.load();
     } catch (error) {
       this.#error = describeError(error);
@@ -155,8 +164,7 @@ export class MessageList extends BaseElement {
   }
 
   #row(message: Message): string {
-    const id = message.id ? String(message.id) : "";
-    const text = message.text ?? "";
+    const { id, text } = message;
     if (this.#editingId === id) {
       return `
         <li>
@@ -238,14 +246,12 @@ export class MessageList extends BaseElement {
   }
 }
 
-/** Turn a thrown Kiota error into a human-readable line, calling out the auth case. */
+/** Turn a thrown error into a human-readable line, calling out the auth case. */
 function describeError(error: unknown): string {
-  const status = (error as { responseStatusCode?: number } | undefined)?.responseStatusCode;
-  if (status === 401 || status === 403) {
+  if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
     return "Authentication required — creating, editing and deleting need a bearer token (see “Authenticated writes”).";
   }
-  const problem = error as { messageEscaped?: string; message?: string } | undefined;
-  return problem?.messageEscaped || problem?.message || "Request failed.";
+  return error instanceof Error ? error.message : "Request failed.";
 }
 
 /** Minimal CSS.escape fallback for attribute-selector-safe ids (GUIDs are already safe). */

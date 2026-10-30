@@ -24,7 +24,7 @@ export const build = steps.imageBuild({
 
 export const test = step({
   name: "test",
-  description: "Runs `mise run ci`: backend unit and API tests, the TS client drift check, frontend lint, tests and build.",
+  description: "Runs `mise run ci`: backend unit and API tests, the contract and TS client, frontend lint, tests and build.",
   image: "mcr.microsoft.com/dotnet/sdk:10.0-noble",
   input: { source: Source },
   timeoutSeconds: 1800,

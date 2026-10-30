@@ -8,28 +8,27 @@ reason. Back a rule with a test where possible.
 - The JSON API lives under `/api/`. `/health` is anonymous and says only up/down; anything
   diagnostic lives under `/api/` behind auth. Whether `/health` is reachable publicly is decided
   in networking (the `Olve.Homelab` edge), not in code.
-- Every endpoint requires authentication unless it opts out with `.AllowAnonymous()` (the
+- Every endpoint MUST be a contract operation in `src/spec/`, the SPA's static files aside.
+- Every endpoint requires authentication unless `MapApi` opens it with `.AllowAnonymous()` (the
   fallback policy); an anonymous endpoint SHOULD say why in a comment when it isn't obvious.
 - `GET` MUST NOT have side effects beyond logging, metrics and tracing.
 - `PUT` and `DELETE` MUST be idempotent in effect: repeating one leaves the same state.
-- Expected failures MUST be `Result` problems (Olve.Results), never exceptions. They reach the
-  client as a `ResultProblem[]` body via Olve.MinimalApi's `.WithResultMapping()`.
-- A missing resource (unknown id or key) MUST be a `NotFoundProblem`, which answers 404; any other
-  problem answers 400. An endpoint that can answer 404 MUST declare it with
-  `.Produces<ResultProblem[]>(StatusCodes.Status404NotFound)`.
-- Request bodies MUST be validated at the edge with `.WithValidation<TRequest, TValidator>()`,
-  so a handler only ever sees valid input.
+- Expected failures MUST be declared responses of the operation, never exceptions. They reach the
+  client as a `Problem[]` body (`src/spec/errors.tsp`).
+- A missing resource (unknown id or key) MUST answer the declared 404; any other problem answers
+  400.
+- Request bodies MUST be constrained in the contract (`@minLength`, `@maxLength`, …), so a handler
+  only sees input that meets them; a rule the contract can't state goes in a validator the handler
+  calls first.
 - Timestamps MUST be UTC ISO-8601; IDs are opaque strings to clients.
 - Secrets and tokens MUST NOT appear in responses, logs or traces.
 
 ## Code
 
-- JSON serialization MUST be source-generated (`AppJsonContext`); no reflection-based
-  serialization.
-- Generated output (the OpenAPI document, build outputs) goes to the gitignored `artifacts/`,
-  never into source folders. The one exception is the frontend's Kiota client
-  (`frontend/src/api`), which is committed so the frontend and the Docker build need no dotnet;
-  `mise run client:check` fails CI when it drifts from the API.
+- JSON serialization MUST be source-generated (the contract's generated context, `AppJsonContext`
+  for persistence); no reflection-based serialization.
+- Generated output (the C# surface, the OpenAPI document, the TS client, build outputs) goes to the
+  gitignored `artifacts/`, never into source folders.
 - An API change and its client/frontend support land together.
 
 ## Tests

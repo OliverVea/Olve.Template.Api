@@ -16,7 +16,9 @@
     "verbatimModuleSyntax": true,
     "useDefineForClassFields": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "paths": { "@api/*": ["../artifacts/clients/ts/*"] }
   },
   "include": ["src"]
 }
