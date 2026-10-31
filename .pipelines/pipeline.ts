@@ -19,6 +19,8 @@ export const build = steps.imageBuild({
   name: "build",
   description: "Builds the app image (API + SPA) with kaniko.",
   repository: "olve-template-api",
+  // kaniko under gVisor stalls pulling from mcr.microsoft.com directly.
+  registryMap: { "mcr.microsoft.com": "mcr-cache.ovea.pro", "index.docker.io": "hub-cache.ovea.pro" },
   timeoutSeconds: 1200,
 });
 

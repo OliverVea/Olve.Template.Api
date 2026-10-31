@@ -55,7 +55,8 @@
             "data/**",
             "**/node_modules/**",
             "src/frontend/dist/**",
-            ".pipelines/.olve/**"
+            ".pipelines/.olve/**",
+            ".pipelines/bun.lock"
           ]
         }
       ]

@@ -114,7 +114,7 @@ service reconciles it from this file and **pushing to `main` deploys to beta, th
 The pipeline shape (stages run in order; steps in a stage run in parallel):
 
 1. `source` (the pushed commit). `build` pulls base images through the homelab pull-through caches
-   (the SDK's `imageBuild` default; kaniko under gVisor stalls pulling from mcr.microsoft.com).
+   (its `registryMap`; kaniko under gVisor stalls pulling from mcr.microsoft.com).
 2. `build` (kaniko image) ∥ `test` (`mise run ci`: backend unit + in-process API tests, the
    contract's client, frontend lint/test/build).
 3. `deploy-beta` (Helm, namespace `apps-beta`, plus a health check) → `beta-test` (the whole API
@@ -126,7 +126,8 @@ The pipeline shape (stages run in order; steps in a stage run in parallel):
 Any failure stops the run, so a broken beta never reaches prod. A manual run with
 `deployTo=beta` stops after beta. **Secrets are by name only** (`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`,
 `API_TEST_CLIENT_SECRET`); their values are set with `pl secret set` and live in the pipeline's own
-k8s secret, never in the repo.
+k8s secret, never in the repo. The pipeline follows the SDK's `beta` tag with no lockfile, so each
+reconcile builds with the newest beta.
 
 **Homelab conformance.** The Helm chart renders a **`ClusterIP` Service only — no Ingress**
 ([`Olve.Homelab`](https://github.com/OliverVea/Olve.Homelab) is the edge chart that owns all Ingress).

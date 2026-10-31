@@ -486,3 +486,4 @@ data/
 
 # Olve.Pipelines local work directory (pl dev, olve-build)
 .pipelines/.olve/
+.pipelines/bun.lock
