@@ -18,7 +18,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "paths": { "@api/*": ["../artifacts/clients/ts/*"] }
+    "paths": { "@api/*": ["../../artifacts/clients/ts/*"] }
   },
   "include": ["src"]
 }

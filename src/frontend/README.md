@@ -1,4 +1,4 @@
-# frontend/ — vanilla Web Components + TypeScript
+# src/frontend/ — vanilla Web Components + TypeScript
 
 The template's companion frontend: a no-framework, **vanilla Web Components** app in
 **TypeScript**, consuming the backend through a client generated from the contract. It renders the
@@ -22,7 +22,7 @@ end to end (DESIGN §2).
 ## Layout
 
 ```
-frontend/
+src/frontend/
 ├─ index.html                 demo page (mounts <message-list>, optional token field)
 ├─ vite.config.ts             dev server + API proxy
 ├─ src/

@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Olve.Template.Api/Olve.Template.Api.csproj" />
+    <ProjectReference Include="../Olve.Template.Api/Olve.Template.Api.csproj" />
   </ItemGroup>
 
 </Project>

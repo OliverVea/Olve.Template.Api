@@ -249,7 +249,7 @@ legitimately takes a host-lifecycle dependency — keeping core free of it perma
 
 **Staging (resolved) — incubate in the template first, promote later.** The package layout
 above is the *target*, not the first step. v1 ships **inside `Olve.Template.Api`** as a
-self-contained, promotion-shaped module (proposed `src/Olve.Template.Api/Stores/`, sitting
+self-contained, promotion-shaped module (proposed `src/backend/Olve.Template.Api/Stores/`, sitting
 alongside the existing `Configuration/`, `Health/`, `Message/` modules). Reasons:
 
 - A template must be **self-contained and installable** — taking a dependency on an
@@ -446,9 +446,9 @@ backpressured `Channel<T>` reference).
 
 ## 2. Frontend (FE)
 
-A companion frontend that ships as an in-repo **`frontend/`** folder (resolved — see §2.6).
+A companion frontend that ships as an in-repo **`src/frontend/`** folder (resolved — see §2.6).
 It is **always present, not gated by a template parameter**: a service that needs no UI
-simply deletes the `frontend/` folder (and its CI/build step) rather than toggling an opt-in.
+simply deletes the `src/frontend/` folder (and its CI/build step) rather than toggling an opt-in.
 The opt-in principle in this template is about *framework/runtime lock-in* (§2.1), not about
 whether the folder exists.
 
@@ -501,16 +501,16 @@ client-gen → component → API loop end-to-end.
 
 ### 2.6 Open questions — resolved
 
-- ~~Separate repo vs. opt-in folder in this template?~~ **Resolved: an in-repo `frontend/`
+- ~~Separate repo vs. opt-in folder in this template?~~ **Resolved: an in-repo `src/frontend/`
   folder** (not a separate `Olve.Template.Web` repo).
 - ~~TypeScript vs. plain JS for the vanilla baseline?~~ **Resolved: vanilla TypeScript**
   (Vite build), overriding the plain-JS recommendation below — chosen so the generated client is
   consumed with full types. The litify-later and no-auto-rerender stances are unchanged.
 - ~~Where does the SPA get served?~~ **Resolved: same-origin from the API.** The Dockerfile
-  builds `frontend/dist` into the app's `wwwroot`; the API serves the SPA at `/` (with an
+  builds `src/frontend/dist` into the app's `wwwroot`; the API serves the SPA at `/` (with an
   `index.html` fallback for client routing) and moves its own JSON endpoints under **`/api/`**
   (`/health` stays at the root for probes). One host, no CORS, no second deployment. A headless
-  service drops the frontend by deleting `frontend/`, the Dockerfile's Node stage, and the
+  service drops the frontend by deleting `src/frontend/`, the Dockerfile's Node stage, and the
   `wwwroot` copy.
 
   *(Original recommendation, kept for the record: plain JS baseline, TS available as opt-in,

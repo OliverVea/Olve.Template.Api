@@ -16,20 +16,20 @@ dotnet new olve-api -n "MyCompany.MyService"
 
 ```
 src/spec/                                       # The API contract (TypeSpec), one .tsp per area
-src/Olve.Template.Api/                          # API application (minimal API)
+src/backend/Olve.Template.Api/                  # API application (minimal API)
 ├── Configuration/                              # Auth, telemetry, host config, API wiring
 ├── Messages/                                   # Message CRUD example feature
 ├── Stores/                                     # EntityStore snapshot persistence (promotion-shaped)
 ├── Health/                                     # Health check endpoints
 └── appsettings.json                            # Default configuration
-test/Olve.Template.Api.UnitTests/               # Unit tests (TUnit + Rocks)
-test/Olve.Template.Api.ApiTests/                # API tests over HTTP (in-process or any base URL)
-frontend/                                       # Vanilla Web Components + TS frontend (see frontend/README.md)
+src/backend/Olve.Template.Api.UnitTests/        # Unit tests (TUnit + Rocks)
+src/backend/Olve.Template.Api.ApiTests/         # API tests over HTTP (in-process or any base URL)
+src/frontend/                                   # Vanilla Web Components + TS frontend (see src/frontend/README.md)
 docs/STANDARDS.md                               # MUST/SHOULD rules for API behaviour, code and tests
 artifacts/                                      # Generated output (C# surface, OpenAPI document, TS client), gitignored
 mise.toml                                       # Toolchain pins + tasks; `mise run ci` is the pipeline gate
 tools/version.cs                                # CalVer versioning script
-helm/                                           # Helm chart for Kubernetes (ClusterIP Service + SLO)
+src/deploy/helm/                                # Helm chart for Kubernetes (ClusterIP Service + SLO)
 .pipelines/                                     # Olve.Pipelines CD pipeline (build ∥ test, beta → smoke test → prod)
 Dockerfile                                      # Multi-stage build (AOT, chiseled)
 Directory.Build.props                           # Shared build properties (TFM, nullable, etc.)
@@ -40,7 +40,7 @@ Directory.Packages.props                        # Central package version manage
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/` | No | The SPA (`frontend/`), served from `wwwroot` — see [Frontend](#frontend) |
+| GET | `/` | No | The SPA (`src/frontend/`), served from `wwwroot` — see [Frontend](#frontend) |
 | GET | `/health` | No | Health check, returns 200 |
 | GET | `/api/auth-config` | No | Public OIDC settings for the SPA login (authority, client id, scopes) |
 | GET | `/api/messages?page=<n>&pageSize=<n>` | No | List messages (paginated, 1-based) |
@@ -74,7 +74,7 @@ dotnet test                          # Unit + API tests
 dotnet test -p:RunApiTests=false     # Unit tests only
 ```
 
-**API tests** (`test/Olve.Template.Api.ApiTests`) are one HTTP suite with a selectable target
+**API tests** (`src/backend/Olve.Template.Api.ApiTests`) are one HTTP suite with a selectable target
 (`ApiTarget`): in-process via `WebApplicationFactory` by default, or any running server when
 `API_BASE_URL` is set. Against a base URL, authenticated tests send `API_TOKEN` as the bearer
 token, or mint one when `API_SIGNING_KEY`, `API_ISSUER` and `API_AUDIENCE` are set to the server's
@@ -97,10 +97,10 @@ a per-run database or container, and pass the same setting as an env var in `api
 
 ```bash
 # Local
-dotnet run --project src/Olve.Template.Api
+dotnet run --project src/backend/Olve.Template.Api
 
 # Kubernetes
-helm install olve-template-api helm/
+helm install olve-template-api src/deploy/helm/
 ```
 
 ## Deployment (GitOps)
@@ -210,7 +210,7 @@ HTTP.
 
 ## Frontend
 
-`frontend/` is the template's companion UI: a no-framework, **vanilla Web Components** app in
+`src/frontend/` is the template's companion UI: a no-framework, **vanilla Web Components** app in
 **TypeScript**, consuming the API through a client generated from the contract. It ships a
 `<message-list>` CRUD view over the backend `Message` feature, proving the client-gen →
 component → API loop end to end.
@@ -220,7 +220,7 @@ The stance is deliberate (DESIGN §2): standalone custom elements, ES modules, a
 re-rendering**. A component that outgrows this can `npm i lit` and switch its own base to
 `LitElement` per-component; auto-rerender is always opt-in, never the baseline.
 
-It's served **same-origin**: the Dockerfile's Node stage builds `frontend/dist` into the app's
+It's served **same-origin**: the Dockerfile's Node stage builds `src/frontend/dist` into the app's
 `wwwroot`, so the deployed API serves the SPA at `/` and the JSON API at `/api/` (one host, no
 CORS). Locally you run it on Vite instead, which proxies `/api` to the backend:
 
@@ -228,7 +228,7 @@ CORS). Locally you run it on Vite instead, which proxies `/api` to the backend:
 cd frontend && npm install && npm run dev    # proxies /api to the API (VITE_API_TARGET)
 ```
 
-See [`frontend/README.md`](frontend/README.md) for the layout, run/build commands, auth for
+See [`src/frontend/README.md`](src/frontend/README.md) for the layout, run/build commands, auth for
 writes, and how the client is generated.
 
 ## Versioning

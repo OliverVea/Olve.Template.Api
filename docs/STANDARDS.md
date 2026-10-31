@@ -34,7 +34,7 @@ reason. Back a rule with a test where possible.
 ## Tests
 
 - `mise run ci` is the gate: what passes locally passes in the pipeline, and the reverse.
-- API tests (`test/Olve.Template.Api.ApiTests`) are behaviour tests over raw HTTP. They MUST run
+- API tests (`src/backend/Olve.Template.Api.ApiTests`) are behaviour tests over raw HTTP. They MUST run
   unchanged against any target (in-process, the Docker image, live beta), so they:
   - assert only on data they create themselves, never on counts or seeded data;
   - get a token through `ApiTarget.CreateAuthenticatedClient()`, which skips the test where

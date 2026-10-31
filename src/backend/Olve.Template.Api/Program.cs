@@ -17,7 +17,7 @@ var app = builder.Build();
 var eventLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Olve.Template.Api.Events");
 EventDispatch.OnHandlerException = ex => eventLogger.LogError(ex, "A store event handler threw.");
 
-// Serve the SPA (frontend/dist, copied into wwwroot by the Dockerfile) at the site root.
+// Serve the SPA (src/frontend/dist, copied into wwwroot by the Dockerfile) at the site root.
 // Static assets and the index fallback are anonymous — the RequireAuthenticatedUser fallback
 // policy would otherwise 401 them. In local dev the SPA is served by Vite (`npm run dev`),
 // so wwwroot is only populated in the container and this no-ops when running `dotnet run`.

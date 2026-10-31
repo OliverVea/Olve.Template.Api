@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 // The client generated from the contract (artifacts/, gitignored): `mise run client` writes it.
-const api = fileURLToPath(new URL("../artifacts/clients/ts", import.meta.url));
+const api = fileURLToPath(new URL("../../artifacts/clients/ts", import.meta.url));
 
 // In dev, the browser talks to the Vite dev server (same origin) and Vite proxies the
 // API paths to the real backend — no CORS, no base-URL juggling in the component.

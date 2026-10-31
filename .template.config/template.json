@@ -54,7 +54,7 @@
             "artifacts/**",
             "data/**",
             "**/node_modules/**",
-            "frontend/dist/**",
+            "src/frontend/dist/**",
             ".pipelines/.olve/**"
           ]
         }

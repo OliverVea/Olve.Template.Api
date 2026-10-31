@@ -7,12 +7,12 @@
   <!-- The API surface generated from the contract; -p:SkipSpecGen=true compiles already-emitted files
        without node. -->
   <ItemGroup>
-    <TypeSpecContract Include="../spec/main.tsp" GeneratedDir="../../artifacts/generated/" />
+    <TypeSpecContract Include="../../spec/main.tsp" GeneratedDir="../../../artifacts/generated/" />
   </ItemGroup>
 
   <!-- Copied after publish: a wwwroot Content item would need the file before the first compile. -->
   <Target Name="PublishOpenApiDocument" AfterTargets="Publish">
-    <Copy SourceFiles="../../artifacts/spec/openapi.json" DestinationFiles="$(PublishDir)wwwroot/openapi/v1.json" />
+    <Copy SourceFiles="../../../artifacts/spec/openapi.json" DestinationFiles="$(PublishDir)wwwroot/openapi/v1.json" />
   </Target>
 
   <ItemGroup>

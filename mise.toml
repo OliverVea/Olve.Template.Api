@@ -9,7 +9,7 @@ dotnet = "10.0.200"
 
 [tasks.install]
 description = "Restore dotnet tools and install the contract's and frontend's dependencies (lockfiles)"
-run = ["dotnet tool restore", "npm ci --prefix src/spec", "npm ci --prefix frontend"]
+run = ["dotnet tool restore", "npm ci --prefix src/spec", "npm ci --prefix src/frontend"]
 
 [tasks."backend:test"]
 description = "Backend build + unit and API tests (API tests in-process)"
@@ -21,11 +21,11 @@ description = "Compile the contract and generate the TS client"
 dir = "src/spec"
 run = "npm run build"
 
-# DELETE-WITH-THE-FRONTEND: a headless service that removes frontend/ deletes this task, `client`,
+# DELETE-WITH-THE-FRONTEND: a headless service that removes src/frontend/ deletes this task, `client`,
 # their entries in `ci`, and frontend's half of `install`.
 [tasks."frontend:check"]
 description = "Frontend lint, tests, production build"
-dir = "frontend"
+dir = "src/frontend"
 run = ["npm run lint", "npm test", "npm run build"]
 
 # The AOT check: in-process API tests run JIT, so serialization gaps only a trimmed native binary
@@ -44,7 +44,7 @@ trap 'docker rm -f "$container" >/dev/null' EXIT
 url="http://$(docker port "$container" 5000/tcp | head -n1)"
 for _ in $(seq 60); do curl -fs "$url/health" >/dev/null && break || sleep 1; done
 API_BASE_URL="$url" API_SIGNING_KEY="$key" API_ISSUER=api-test API_AUDIENCE=api-test \
-  dotnet test --project test/Olve.Template.Api.ApiTests
+  dotnet test --project src/backend/Olve.Template.Api.ApiTests
 """
 
 [tasks."api:remote"]
@@ -53,7 +53,7 @@ run = """
 #!/usr/bin/env bash
 set -euo pipefail
 : "${API_BASE_URL:?set API_BASE_URL to the server under test}"
-dotnet test --project test/Olve.Template.Api.ApiTests
+dotnet test --project src/backend/Olve.Template.Api.ApiTests
 """
 
 [tasks.ci]

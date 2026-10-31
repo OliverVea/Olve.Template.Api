@@ -8,7 +8,7 @@ See [README.md](README.md) for project structure, endpoints, configuration, CI e
 dotnet build                                                # Build
 dotnet test                                                 # Unit + API tests (API tests in-process)
 dotnet test -p:RunApiTests=false                            # Unit tests only
-dotnet run --project src/Olve.Template.Api                  # Run locally
+dotnet run --project src/backend/Olve.Template.Api                  # Run locally
 ```
 
 `mise run ci` (or `npx mise run ci` without mise installed) is the pipeline gate: backend tests,
