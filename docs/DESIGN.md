@@ -546,45 +546,47 @@ secrets, the self-deploy framing):
 
 ```
 .pipelines/
-  pipeline.ts        # steps and stages
+  package.json       # `main` names the entry point
+  pipeline.ts        # the entry point: triggers and stages
+  config.ts          # secrets and instance config (image, targets, beta token client)
+  steps.ts           # test, beta-test, prod-test
   models.ts          # input model (DeployRequest)
-  handlers/          # test, beta-test, prod-test
+  lib/               # helpers: mise, smoke test, token client
 ```
 
 `pipeline.ts` (generic), one stage per line, steps in a stage in parallel:
 
 - `source` (`gitHubSource`)
-- `build` (`imageBuild`, kaniko) ∥ `test` (`mise run ci`)
-- `deploy-beta` (`helmDeployOverSsh`, `apps-beta`, health check) → `beta-test` (API tests
-  against beta, gates prod)
-- `when deployTo=prod`: `deploy-prod` (`apps`) → `prod-test` (read-only smoke test)
+- `build` (`imageBuild`, kaniko, pushed to a registry) ∥ `test` (`mise run ci`)
+- `deploy-beta` (`helmDeployOverSsh` or `helmDeployInCluster`, by `target.beta.kind`, pinned by
+  digest, health check) → `beta-test` (API tests against beta, gates prod)
+- `when deployTo=prod`: `deploy-prod` (by `target.prod.kind`) → `prod-test` (read-only smoke test)
 - secrets: `GITHUB_TOKEN`, `SSH_PRIVATE_KEY`, `API_TEST_CLIENT_SECRET`
 
 ### 3.3 Reuse mechanism
 
 The `@olivervea/pipelines` SDK ships the shared steps (`gitHubSource`, `imageBuild`,
 `helmDeployOverSsh`) and helpers (`httpHealthCheck`, `checkSpa`, `serviceUrl`). The
-template only parameterizes the app-specifics and writes handlers for its own tests,
+template only parameterizes the app-specifics and implements its own test steps,
 so `.pipelines/` stays small.
 
-### 3.4 Tokens to parameterize (wire into `dotnet new`)
+### 3.4 What a new app sets
 
-These must be substituted by the template engine (`.template.config/template.json`)
-so a new app is deploy-ready with no manual edits:
+In the code, substituted by the template engine (`.template.config/template.json`):
 
 | Token | Example | Used in |
 |---|---|---|
-| repo slug | `OliverVea/Olve.Template.Api` | source |
-| image name | `olve-template-api` | build, helm |
-| helm release | `olve-template-api` | deploy-beta, deploy-prod |
-| namespaces | `apps-beta` / `apps` | deploy-beta, deploy-prod |
-| health URL | `http://<app>.apps-beta.svc.cluster.local/health` | deploy-beta health check |
-| deploy host | `oliver@bulwark-m2` | ssh/import/helm |
+| repo slug | `OliverVea/Olve.Template.Api` | `models.ts` |
+| helm release default | `olve-template-api` | `config.ts` |
 
-### 3.5 Open questions
+In the pipeline's config document (`pl config set`), per instance:
 
-- Should `slo.enabled=false` (beta) be a default override, as Pipelines does until the
-  sloth CRD is cluster-wide? The template *does* ship SLO templates, so yes — mirror it.
+| Entry | Example |
+|---|---|
+| `image.repository` | `registry.ovea.pro/olve-template-api` |
+| `image.registryMap` | `mcr.microsoft.com: mcr-cache.ovea.pro` |
+| `target.beta`, `target.prod` | `kind`, `host`, `namespace`, `values`, `set` (`slo.enabled: "false"` while the sloth CRD isn't in the cluster) |
+| `betaClient` | `tokenUrl`, `clientId`, `scope` |
 
 ---
 
