@@ -40,13 +40,13 @@ Current leanings, not binding decisions: confirm before relying on one that pred
 
 - **Borrow from Olve.AgentRuntimeManager in two steps (2026-09-27).** ARM grew out of this
   template. Its workflow pieces are adopted now: mise as the single entry point (`mise run ci` is
-  the pipeline's `check`), generated output in gitignored `artifacts/`, one API test suite that
-  runs in-process or against a base URL (Docker image, live beta via `test-after-beta`), and
+  the pipeline's `test`), generated output in gitignored `artifacts/`, one API test suite that
+  runs in-process or against a base URL (Docker image, live beta via `beta-test`), and
   `docs/STANDARDS.md`. Its spec-first stack (TypeSpec contract, our own backend emitter, Hey API
   clients) follows once ARM is further along, with the emitter extracted into its own package
   rather than copied here.
 - **AOT stays with spec-first (2026-10-30).** The generated surface is source-generated too, so
-  `PublishAot` stays on; `mise run api:image` plus `test-after-beta` are what catch AOT-only
+  `PublishAot` stays on; `mise run api:image` plus `beta-test` are what catch AOT-only
   breakage.
 - **Nothing generated is committed (2026-10-30).** The contract compiles without dotnet, so the
   Dockerfile's `spec` stage emits the C# surface, the OpenAPI document and the TS client into
@@ -535,41 +535,37 @@ template deploy out of the box and makes the Pipelines doc true.
 > Public exposure (and Authentik forward-auth, cert-manager/Cloudflare TLS, path-scoped
 > public routes like `/api/webhooks/...`) is configured by *adding the app's host +
 > service to the edge chart's `apps[]`/`apps-beta[]` list*, not in the app's own chart.
-> The template's deploy scripts/health-gate must therefore probe the in-cluster Service
+> The template's health checks and tests must therefore probe the in-cluster Service
 > (or the edge-routed host once registered), and docs should tell the operator to add
 > their entry to `Olve.Homelab`.
 
 ### 3.2 Shape (genericized from `Olve.Pipelines/.pipelines/`)
 
-A minimal generic config — drop Pipelines-specific bits (`publish-cli`, the MinIO
+A minimal generic pipeline — drop Pipelines-specific bits (`publish-cli`, the storage
 secrets, the self-deploy framing):
 
 ```
 .pipelines/
-  config.yaml
-  scripts/
-    build.sh         # Kaniko build → stage image.tar + helm chart + version.txt
-    check.sh         # mise run ci, parallel to build, gates deploy
-    deploy-beta.sh   # import image, helm upgrade beta, health gate
-    test-after-beta.sh  # API tests against the live beta Service, gates prod
-    deploy.sh        # helm upgrade prod
+  pipeline.ts        # steps and stages
+  models.ts          # input model (DeployRequest)
+  handlers/          # test, beta-test, prod-test
 ```
 
-`config.yaml` (generic):
+`pipeline.ts` (generic), one stage per line, steps in a stage in parallel:
 
-- `productionSteps`: `build-and-package` (kaniko) + `check` (dotnet sdk + mise), in parallel
-- `processingSteps`: `deploy-beta` → `test-after-beta` → `deploy` (beta gates prod, sequential)
-- `failureHandlers`: `aoe-triage` (built-in library handler, fires on any failure)
-- `secrets`: `GITHUB_TOKEN`, `SSH_PRIVATE_KEY` only (no MinIO/CLI secrets)
+- `source` (`gitHubSource`)
+- `build` (`imageBuild`, kaniko) ∥ `test` (`mise run ci`)
+- `deploy-beta` (`helmDeployOverSsh`, `apps-beta`, health check) → `beta-test` (API tests
+  against beta, gates prod)
+- `when deployTo=prod`: `deploy-prod` (`apps`) → `prod-test` (read-only smoke test)
+- secrets: `GITHUB_TOKEN`, `SSH_PRIVATE_KEY`, `API_TEST_CLIENT_SECRET`
 
 ### 3.3 Reuse mechanism
 
-Pipelines' scripts already fetch a shared `olve-lib.sh` from
-`raw.githubusercontent.com/OliverVea/Olve.Pipelines/main/.pipelines/scripts/olve-lib.sh`
-(`olve_version`, `olve_fetch_repo`, `olve_kaniko_build`, `olve_image_import`,
-`olve_helm_deploy`, `olve_bundle_input`, …). The template's scripts should fetch the
-**same** shared lib and only parameterize the app-specifics. So the template scripts
-stay tiny.
+The `@olivervea/pipelines` SDK ships the shared steps (`gitHubSource`, `imageBuild`,
+`helmDeployOverSsh`) and helpers (`httpHealthCheck`, `checkSpa`, `serviceUrl`). The
+template only parameterizes the app-specifics and writes handlers for its own tests,
+so `.pipelines/` stays small.
 
 ### 3.4 Tokens to parameterize (wire into `dotnet new`)
 
@@ -578,17 +574,15 @@ so a new app is deploy-ready with no manual edits:
 
 | Token | Example | Used in |
 |---|---|---|
-| repo slug | `OliverVea/Olve.Template.Api` | build/deploy fetch |
+| repo slug | `OliverVea/Olve.Template.Api` | source |
 | image name | `olve-template-api` | build, helm |
-| helm release | `olve-template-api` | deploy-beta, deploy |
-| namespaces | `apps-beta` / `apps` | deploy |
-| health URL | `https://<app>-beta.ovea.pro/health` | beta health-gate |
+| helm release | `olve-template-api` | deploy-beta, deploy-prod |
+| namespaces | `apps-beta` / `apps` | deploy-beta, deploy-prod |
+| health URL | `http://<app>.apps-beta.svc.cluster.local/health` | deploy-beta health check |
 | deploy host | `oliver@bulwark-m2` | ssh/import/helm |
 
 ### 3.5 Open questions
 
-- Pin `olve-lib.sh` to a tag/SHA instead of `main` for reproducibility? (Pipelines
-  uses `main`.) Recommendation: template ships `main`, documents how to pin.
 - Should `slo.enabled=false` (beta) be a default override, as Pipelines does until the
   sloth CRD is cluster-wide? The template *does* ship SLO templates, so yes — mirror it.
 

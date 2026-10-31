@@ -3,7 +3,7 @@
   <!--
     API tests: the service's behaviour over raw HTTP, one suite with a selectable target (ApiTarget):
     in-process via WebApplicationFactory by default, or any running server when API_BASE_URL is set
-    (`mise run api:image` runs them against the Docker image, test-after-beta against live beta).
+    (`mise run api:image` runs them against the Docker image, the pipeline's beta-test against live beta).
     On by default; opt out with -p:RunApiTests=false.
   -->
   <PropertyGroup>
