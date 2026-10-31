@@ -3,6 +3,8 @@ replicaCount: 1
 image:
   repository: olve-template-api
   tag: latest
+  # Pins the image (repository:tag@digest); empty = by tag.
+  digest: ""
   pullPolicy: IfNotPresent
 
 service:

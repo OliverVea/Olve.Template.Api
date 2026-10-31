@@ -1,6 +1,5 @@
-# Beta overlay, applied on top of values.yaml by deploy-beta.sh (`-f values-beta.yaml`).
-# Only the values that differ from prod for the apps-beta deploy. slo.enabled=false is passed
-# via --set in deploy-beta.sh (the sloth CRD is not installed cluster-wide yet), not here.
+# Beta overlay, applied on top of values.yaml through the beta target's `values` in the pipeline
+# config. Only the values that differ from prod for the apps-beta deploy.
 config:
   # Beta Authentik, used for API JWT validation (bearer tokens on protected endpoints).
   Auth__Authority: "https://auth-beta.ovea.pro/application/o/olve-template-api/"

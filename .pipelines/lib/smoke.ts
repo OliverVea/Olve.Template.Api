@@ -9,7 +9,7 @@ export const waitHealthy = (ctx: Ctx, url: string) =>
 
 // Read-only (plus one rejected write), so it is safe against prod.
 export async function smokeTest(ctx: Ctx, release: Infer<typeof HelmRelease>) {
-  const url = serviceUrl(release);
+  const url = release.url ?? serviceUrl(release);
   await waitHealthy(ctx, url);
 
   const page = await ctx.http.getJson<{ items?: unknown; pageNumber?: number; totalCount?: number }>(`${url}/api/messages?page=1&pageSize=5`);
