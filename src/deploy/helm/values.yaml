@@ -42,6 +42,8 @@ auth: {}
 # or else an existing Secret named githubSecret (keys github-client-id, github-client-secret).
 dex:
   image: "dexidp/dex:v2.43.1"
+  # How long a signed-in token stays valid (a Go duration; Dex's own default is 24h).
+  tokenLifetime: 168h
   # github: { clientId: <Client ID>, clientSecret: <client secret> }
   github: null
   githubSecret: olve-template-api-dex
