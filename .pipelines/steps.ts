@@ -6,11 +6,11 @@ import {
   Source,
   step,
 } from '@olivervea/pipelines';
-import { BETA_TOKEN } from './config';
+import { AUTH, BETA_TOKEN, TARGET } from './config';
 //#if (false)
 import { NUGET_API_KEY } from './config';
 //#endif
-import { checkBundledDex, smokeTest, waitHealthy } from './lib/smoke';
+import { checkDex, smokeTest, waitHealthy } from './lib/smoke';
 import { DOTNET_ENV, DOTNET_SDK_IMAGE, installBun } from './lib/toolchain';
 
 export const test = implement(
@@ -41,6 +41,7 @@ export const betaTest = implement(
     image: DOTNET_SDK_IMAGE,
     input: { source: Source, release: HelmRelease },
     secrets: [BETA_TOKEN],
+    config: [AUTH, TARGET],
     timeoutSeconds: 900,
   }),
   async ({ source, release }, ctx) => {
@@ -49,7 +50,8 @@ export const betaTest = implement(
     await installBun(ctx);
     await waitHealthy(ctx, url);
     await checkSpa(ctx, url);
-    await checkBundledDex(ctx, release, url);
+    const auth = ctx.config.target.beta.auth ?? ctx.config.auth;
+    if (auth.mode === 'dex') await checkDex(ctx, release, url, auth.bundled);
     await ctx.exec(['dotnet', 'test', '--project', API_TESTS], {
       cwd: tree,
       env: { ...DOTNET_ENV, API_BASE_URL: url, API_TOKEN: ctx.secrets.BETA_TOKEN },

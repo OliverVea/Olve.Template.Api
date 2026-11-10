@@ -85,6 +85,8 @@ secret) static client, `olve-template-api` (`auth.clientId`), with `https://<hos
 redirect URI; `dex.extraRedirectURIs` adds more (e.g. `http://localhost:5173/callback` for a local Vite
 against a deployed Dex). Scopes are `openid profile email offline_access` (the last yields a refresh
 token), plus `groups` when `auth.allow.orgs` is set. A signed-in user outside `auth.allow` gets `403`.
+With `auth.bundled: false` the SPA signs in through an existing Dex at `auth.issuer` instead, where the
+same client and redirect URI must be registered.
 
 ## Build
 

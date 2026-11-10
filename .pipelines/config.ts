@@ -46,10 +46,20 @@ const Auth = z.discriminatedUnion('mode', [
       ),
   }),
   z.object({
-    mode: z.literal('dex').describe("The chart's bundled Dex, with a GitHub upstream."),
+    mode: z
+      .literal('dex')
+      .describe('A Dex with a GitHub upstream: the bundled one, or an existing one.'),
     issuer: z
       .url()
-      .describe('https://<host>/dex: the edge routes /dex to the Dex Service.'),
+      .describe(
+        "Bundled: https://<host>/dex (the edge routes /dex to the Dex Service). Existing: that Dex's issuer.",
+      ),
+    bundled: z
+      .boolean()
+      .default(true)
+      .describe(
+        'false: use an existing Dex at `issuer` instead of running one; it must have `clientId` as a public static client with https://<host>/callback as a redirect URI (and load groups for allow.orgs).',
+      ),
     clientId: z.string().default('olve-template-api'),
     frontendClientId: z.string().optional(),
     allow: z

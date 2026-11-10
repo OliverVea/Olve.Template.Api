@@ -26,6 +26,8 @@ resources:
 #   mode: none                       # Auth__Disable=true: every endpoint is anonymous
 #   mode: dex                        # the bundled Dex below, GitHub upstream
 #     issuer: https://<host>/dex
+#     bundled: false                 # use an existing Dex at issuer instead; it must list clientId as a
+#                                    # public static client with https://<host>/callback as a redirect URI
 #     clientId: olve-template-api    # the SPA's public client; default the chart name
 #     allow: { users: [<github login>], orgs: [<org or org:team>], emails: [], subjects: [] }
 #   mode: authentik, authority, audience, frontendAuthority?, frontendAudience?
@@ -33,12 +35,11 @@ resources:
 # The pipeline sets it from its `auth` config (per target with target.<stage>.auth).
 auth: {}
 
-# Bundled Dex (OIDC with a GitHub upstream), rendered when auth.mode is dex and served under /dex on
-# the app's host: the edge (Olve.Homelab) routes <host>/dex to the <release>-dex Service. The GitHub
-# OAuth app's credentials come from githubSecret (keys github-client-id, github-client-secret); its
-# callback URL is <auth.issuer>/callback. enabled: false uses a Dex run elsewhere.
+# Bundled Dex (OIDC with a GitHub upstream), rendered when auth.mode is dex unless auth.bundled is
+# false, and served under /dex on the app's host: the edge (Olve.Homelab) routes <host>/dex to the
+# <release>-dex Service. The GitHub OAuth app's credentials come from githubSecret (keys
+# github-client-id, github-client-secret); its callback URL is <auth.issuer>/callback.
 dex:
-  enabled: true
   image: "dexidp/dex:v2.43.1"
   githubSecret: olve-template-api-dex
   # More redirect URIs for the SPA client, e.g. http://localhost:5173/callback for a local Vite.

@@ -142,6 +142,9 @@ A fresh deploy needs, per namespace:
   - a GitHub OAuth app with callback URL `https://<host>/dex/callback`, its id and secret in the
     Secret `olve-template-api-dex` (keys `github-client-id`, `github-client-secret`);
   - a `/dex` route on the app's host in `Olve.Homelab`, to the `olve-template-api-dex` Service, port 5556.
+  `bundled: false` uses an existing Dex at `issuer` instead, and needs neither: that Dex must list
+  `clientId` (default `olve-template-api`) as a public static client with `https://<host>/callback` as a
+  redirect URI, and load GitHub groups if `allow.orgs` is set. beta-test then checks discovery at `issuer`.
 - **Beta's machine token.** A random `olve-template-api_<hex>` as the `BETA_TOKEN` secret, and its sha256
   (hex) in the beta target's config: `set: { config.Auth__Tokens__beta-test: <hex> }`. Per instance, never
   in the repo: a generated service would otherwise accept the template's token.

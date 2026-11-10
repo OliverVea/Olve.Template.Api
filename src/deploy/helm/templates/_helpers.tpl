@@ -1,15 +1,15 @@
 {{/*
-The bundled Dex runs when auth.mode is dex, unless dex.enabled is false (a Dex elsewhere).
+The bundled Dex runs when auth.mode is dex, unless auth.bundled is false (an existing Dex at auth.issuer).
 */}}
 {{- define "app.dexEnabled" -}}
 {{- $auth := .Values.auth | default dict -}}
-{{- and (eq ($auth.mode | default "") "dex") (ne (toString .Values.dex.enabled) "false") -}}
+{{- and (eq ($auth.mode | default "") "dex") (ne (toString $auth.bundled) "false") -}}
 {{- end -}}
 
 {{/*
 The server's settings: .Values.config, with .Values.auth (when set) mapped onto Auth__*. As YAML, for fromYaml.
   mode: none                       # Auth__Disable=true: every endpoint is anonymous
-  mode: dex, issuer, clientId?, frontendClientId?, allow: { subjects, users, orgs, emails }
+  mode: dex, issuer, bundled?, clientId?, frontendClientId?, allow: { subjects, users, orgs, emails }
   mode: authentik, authority, audience, frontendAuthority?, frontendAudience?
 */}}
 {{- define "app.config" -}}

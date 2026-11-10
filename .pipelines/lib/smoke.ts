@@ -54,25 +54,26 @@ export async function smokeTest(ctx: Ctx, release: Infer<typeof HelmRelease>) {
   ctx.log('smoke test passed', { url, authority: auth.authority });
 }
 
-// The bundled Dex answers discovery in-cluster with the issuer the SPA is given: catches Dex down, or the
-// chart's issuer and the API's authority drifting apart. It can't see the edge's /dex route or GitHub.
-export async function checkBundledDex(
+// The Dex answers discovery with the issuer the SPA is given: catches Dex down, or the chart's issuer and
+// the API's authority drifting apart. The bundled one is asked in-cluster, so this can't see the edge's
+// /dex route or GitHub; an existing one (bundled: false) at its issuer.
+export async function checkDex(
   ctx: Ctx,
   release: Infer<typeof HelmRelease>,
   url: string,
+  bundled: boolean,
 ) {
   const auth = await ctx.http.getJson<{ authority?: string }>(`${url}/api/auth-config`);
-  if (!auth.authority?.endsWith('/dex')) {
-    ctx.log('no bundled Dex to check', { authority: auth.authority });
-    return;
-  }
-  const dex = `http://${release.release}-dex.${release.namespace}.svc.cluster.local:5556`;
+  check(!!auth.authority, '/api/auth-config has no authority');
+  const base = bundled
+    ? `http://${release.release}-dex.${release.namespace}.svc.cluster.local:5556/dex`
+    : auth.authority.replace(/\/$/, '');
   const discovery = await ctx.http.getJson<{ issuer?: string }>(
-    `${dex}/dex/.well-known/openid-configuration`,
+    `${base}/.well-known/openid-configuration`,
   );
   check(
     discovery.issuer === auth.authority,
     `Dex's issuer is ${discovery.issuer}, but /api/auth-config gives the SPA ${auth.authority}`,
   );
-  ctx.log('bundled Dex answers discovery', { issuer: discovery.issuer });
+  ctx.log('Dex answers discovery', { issuer: discovery.issuer, bundled });
 }
