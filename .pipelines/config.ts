@@ -12,6 +12,13 @@ export const API_TEST_CLIENT_SECRET = secret(
   'API_TEST_CLIENT_SECRET',
   'Client secret of the machine client beta-test gets its token with.',
 );
+//#if (false)
+// The template repo only: dotnet new drops everything up to #endif.
+export const NUGET_API_KEY = secret(
+  'NUGET_API_KEY',
+  'nuget.org API key that publish-template pushes the Olve.Template.Api package with.',
+);
+//#endif
 
 export const IMAGE = config(
   'image',

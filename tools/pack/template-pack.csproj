@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Packs the repo as the `dotnet new` template package Olve.Template.Api (the pipeline's
+       publish-template step). Not in the solution, and left out of generated projects. -->
+  <PropertyGroup>
+    <PackageId>Olve.Template.Api</PackageId>
+    <PackageVersion>0.0.0-dev</PackageVersion>
+    <PackageType>Template</PackageType>
+    <Title>Olve API Template</Title>
+    <Authors>Oliver Vea</Authors>
+    <Description>A dotnet new template for a .NET 10 spec-first API service: a TypeSpec contract, JWT/OIDC auth, Native AOT, a Web Components SPA, a Helm chart and an Olve.Pipelines pipeline. Use: dotnet new olve-api -n MyCompany.MyService</Description>
+    <PackageTags>dotnet-new;templates;api;typespec;aot</PackageTags>
+    <PackageProjectUrl>https://github.com/OliverVea/Olve.Template.Api</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/OliverVea/Olve.Template.Api</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- The template has dotfiles (.template.config, .pipelines, .githooks, …) that pack would drop. -->
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <!-- A template package has no lib/ folder by design. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+
+  <!-- The repo's tracked files, as a clean checkout has them: the excludes are what a local build
+       or `bun install` leaves behind. -->
+  <ItemGroup>
+    <None Include="../../**/*" Pack="true" PackagePath="content" Exclude="
+      ../../.git/**;
+      ../../**/bin/**;
+      ../../**/obj/**;
+      ../../**/node_modules/**;
+      ../../artifacts/**;
+      ../../**/TestResults/**;
+      ../../**/dist/**;
+      ../../.pipelines/.olve/**;
+      ../../.pipelines/bun.lock;
+      ../../.claude/settings.local.json;
+      ../../.claude/worktrees/**;
+      ../../tools/pack/**" />
+    <None Include="../../README.md" Pack="true" PackagePath="/" Link="package-readme.md" />
+  </ItemGroup>
+</Project>

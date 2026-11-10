@@ -631,6 +631,14 @@ skill for the authoritative model rather than restating it.
 
 ---
 
+## 5. Publishing (agreed 2026-11-10)
+
+| Area | Decision |
+| --- | --- |
+| Package | The template is published to NuGet as `Olve.Template.Api` (`dotnet new install Olve.Template.Api`). |
+| Where from | A `publish-template` step in this repo's `.pipelines/`, after `prod-test`, not GitHub Actions: only a template whose own service passed beta and the prod smoke test is published. Its key is the pipeline secret `NUGET_API_KEY`. |
+| When | Every push to `main` that reaches prod, versioned by the run (`yyyy.M.d.<run>`). |
+
 ## Suggested sequencing
 
 1. **BE first** — finish `EntityStore` edits → promote to Olve.Utilities → rebuild

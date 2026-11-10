@@ -7,6 +7,9 @@ import {
   step,
 } from '@olivervea/pipelines';
 import { API_TEST_CLIENT_SECRET, BETA_CLIENT } from './config';
+//#if (false)
+import { NUGET_API_KEY } from './config';
+//#endif
 import { clientCredentialsToken } from './lib/auth';
 import { smokeTest, waitHealthy } from './lib/smoke';
 import { DOTNET_ENV, DOTNET_SDK_IMAGE, installBun } from './lib/toolchain';
@@ -72,3 +75,41 @@ export const prodTest = implement(
   }),
   ({ release }, ctx) => smokeTest(ctx, release),
 );
+//#if (false)
+// The template repo only: dotnet new drops everything up to #endif.
+// Runs after prod-test, so only a template whose own service reached prod is published.
+export const publishTemplate = implement(
+  step({
+    name: 'publish-template',
+    description:
+      'Packs the repo as the `dotnet new` template package Olve.Template.Api, versioned by the run (yyyy.M.d.<run>), and pushes it to nuget.org.',
+    image: DOTNET_SDK_IMAGE,
+    input: { source: Source },
+    secrets: [NUGET_API_KEY],
+    timeoutSeconds: 600,
+  }),
+  async ({ source }, ctx) => {
+    const tree = await ctx.files.fetch(source.tree);
+    const version = ctx.run.version;
+    await ctx.exec(
+      [
+        'dotnet',
+        'pack',
+        'tools/pack/template-pack.csproj',
+        `-p:PackageVersion=${version}`,
+        '-o',
+        'out',
+      ],
+      { cwd: tree, env: DOTNET_ENV },
+    );
+    // The key stays in the environment, out of the logged command line.
+    await ctx.sh(
+      'dotnet nuget push out/*.nupkg --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate',
+      { cwd: tree, env: DOTNET_ENV },
+    );
+    ctx.log('published', {
+      url: `https://www.nuget.org/packages/Olve.Template.Api/${version}`,
+    });
+  },
+);
+//#endif

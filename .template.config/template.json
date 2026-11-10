@@ -51,6 +51,7 @@
             ".template.config/**",
             "TestResults/**",
             "docs/design/template.md",
+            "tools/pack/**",
             "artifacts/**",
             "data/**",
             "**/node_modules/**",

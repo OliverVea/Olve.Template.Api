@@ -3,6 +3,9 @@ import { pipeline, steps } from '@olivervea/pipelines';
 import { GITHUB_TOKEN, IMAGE, SSH_PRIVATE_KEY, TARGET } from './config';
 import * as M from './models';
 import { betaTest, prodTest, test } from './steps';
+//#if (false)
+import { publishTemplate } from './steps';
+//#endif
 
 const deploy = {
   chart: 'src/deploy/helm',
@@ -27,7 +30,7 @@ const build = steps.imageBuild({
   timeoutSeconds: 1200,
 });
 
-export default pipeline({
+let app = pipeline({
   name: 'Olve.Template.Api',
   description:
     'Build with kaniko and run `tools/check.sh --full`, deploy to beta with Helm and run the API test suite against it, then deploy the same image to prod and smoke-test that read-only. deployTo=beta stops after beta.',
@@ -83,3 +86,9 @@ export default pipeline({
       })
       .stage([prodTest, (from) => ({ release: from['deploy-prod'] })]),
   );
+//#if (false)
+// The template repo only: dotnet new drops everything up to #endif. Publishes the template package.
+app = app.when({ deployTo: 'prod' }, (p) => p.stage(publishTemplate));
+//#endif
+
+export default app;

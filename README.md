@@ -5,9 +5,14 @@ server's C# surface, the OpenAPI document and a TypeScript client; JWT/OIDC auth
 Components SPA; a Helm chart; and an Olve.Pipelines pipeline that deploys beta, then prod.
 
 ```bash
-dotnet new install .
+dotnet new install Olve.Template.Api           # from NuGet; `dotnet new install .` from a clone
 dotnet new olve-api -n "MyCompany.MyService"
 ```
+
+Every push to `main` that reaches prod publishes a new version to
+[NuGet](https://www.nuget.org/packages/Olve.Template.Api) (`yyyy.M.d.<run>`); `dotnet new update` picks
+it up. `tools/pack/` is the pack project, and the pipeline's `publish-template` step is fenced with
+`//#if (false)` so generated projects don't get it.
 
 The design lives in [docs/design/](docs/design/); building it is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
