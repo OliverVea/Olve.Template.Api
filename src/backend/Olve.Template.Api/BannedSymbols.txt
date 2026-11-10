@@ -1,0 +1,7 @@
+P:System.DateTime.Now;Use TimeProvider (injected), so tests can control time
+P:System.DateTime.UtcNow;Use TimeProvider (injected), so tests can control time
+P:System.DateTime.Today;Use TimeProvider (injected), so tests can control time
+P:System.DateTimeOffset.Now;Use TimeProvider (injected), so tests can control time
+P:System.DateTimeOffset.UtcNow;Use TimeProvider (injected), so tests can control time
+M:System.Threading.Thread.Sleep(System.Int32);Wait on a signal or TimeProvider, not a fixed sleep
+M:System.Threading.Thread.Sleep(System.TimeSpan);Wait on a signal or TimeProvider, not a fixed sleep

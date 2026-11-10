@@ -32,6 +32,13 @@ reason. Back a rule with a test where possible.
 - Generated output (the C# surface, the OpenAPI document, the TS client, build outputs) goes to the
   gitignored `artifacts/`, never into source folders.
 - An API change and its client/frontend support land together.
+- One C# type per file, named after it (generated code aside).
+- IDs in hand-written code are `Id<T>`; a raw `Guid` appears only at the generated contract's boundary.
+- A `Result` is read with `TryPickProblems` (or `Pick`), never `.Value!`.
+- Real time comes only from an injected `TimeProvider`; `BannedSymbols.txt` fails the build on
+  `DateTime.UtcNow`, `DateTimeOffset.UtcNow` and `Thread.Sleep`.
+- Explicit wiring (one line per registration or subscription) over generic infrastructure, until three
+  real cases share the shape. Prefer the plain design, even if it gives up a feature.
 
 ## Tests
 
@@ -44,3 +51,8 @@ reason. Back a rule with a test where possible.
 - Wire shapes in API tests are hand-written records, not the service's types, so a renamed or
   retyped field fails a test instead of silently following.
 - Unit tests mock with Rocks (source-generated), not reflection-based mocking libraries.
+- User-facing text is behaviour: a rejection test asserts the problem's message. Near-identical tests
+  are data rows of one test.
+- No fixed sleeps: wait on a signal or a fake `TimeProvider`. A flake is a defect to fix, never retried.
+- Tests that run on every push make no paid calls (LLMs, paid APIs). The pipeline runs the whole suite
+  against beta and a read-only smoke test against prod.
