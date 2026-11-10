@@ -60,6 +60,8 @@ background and keep working; when reporting a push, name the run that carries it
 
 - .NET 10 Native AOT, C# with file-scoped namespaces, nullable, warnings as errors.
 - Package versions only in `Directory.Packages.props`.
+- Inclusive vocabulary in code, docs and names: allowlist/denylist, `main` as the default branch,
+  primary/replica.
 - Local config via `dotnet user-secrets`, not appsettings files.
 - The API is the TypeSpec contract in `src/spec/`: the build compiles it into `artifacts/` (gitignored: the
   C# surface, the OpenAPI document, the Hey API client). Nothing generated is committed. An API change is a
