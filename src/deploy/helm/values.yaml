@@ -37,10 +37,13 @@ auth: {}
 
 # Bundled Dex (OIDC with a GitHub upstream), rendered when auth.mode is dex unless auth.bundled is
 # false, and served under /dex on the app's host: the edge (Olve.Homelab) routes <host>/dex to the
-# <release>-dex Service. The GitHub OAuth app's credentials come from githubSecret (keys
-# github-client-id, github-client-secret); its callback URL is <auth.issuer>/callback.
+# <release>-dex Service. The GitHub OAuth app (callback URL <auth.issuer>/callback): `github`, which the
+# chart renders as the Secret <release>-dex-github (the pipeline sets it from its dexBeta/dexProd config),
+# or else an existing Secret named githubSecret (keys github-client-id, github-client-secret).
 dex:
   image: "dexidp/dex:v2.43.1"
+  # github: { clientId: <Client ID>, clientSecret: <client secret> }
+  github: null
   githubSecret: olve-template-api-dex
   # More redirect URIs for the SPA client, e.g. http://localhost:5173/callback for a local Vite.
   extraRedirectURIs: []

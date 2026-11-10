@@ -1,17 +1,33 @@
 // Every push goes beta, then prod. Where they are is the instance's config (config.ts).
 import { pipeline, steps, type ConfigRef } from '@olivervea/pipelines';
-import { AUTH, GITHUB_TOKEN, IMAGE, SSH_PRIVATE_KEY, TARGET } from './config';
+import {
+  AUTH,
+  DEX_BETA,
+  DEX_GITHUB_SECRET_BETA,
+  DEX_GITHUB_SECRET_PROD,
+  DEX_PROD,
+  GITHUB_TOKEN,
+  IMAGE,
+  SSH_PRIVATE_KEY,
+  TARGET,
+} from './config';
 import * as M from './models';
 import { betaTest, prodTest, test } from './steps';
 //#if (false)
 import { publishTemplate } from './steps';
 //#endif
 
-// The chart's `auth` value: the pipeline's `auth`, replaced by the target's own when it sets one.
-const deploy = (target: { auth: ConfigRef }) =>
+// The chart's `auth` value: the pipeline's `auth`, replaced by the target's own when it sets one. Each
+// stage may read only its own GitHub OAuth secret (auth.github.clientSecret).
+const DEX_SECRET = {
+  beta: DEX_GITHUB_SECRET_BETA,
+  prod: DEX_GITHUB_SECRET_PROD,
+} as const;
+const deploy = (stage: keyof typeof DEX_SECRET, target: { auth: ConfigRef }) =>
   ({
     chart: 'src/deploy/helm',
     inlineValues: [{ auth: AUTH }, { auth: target.auth }],
+    secrets: [DEX_SECRET[stage]],
     healthPath: '/health',
     timeoutSeconds: 900,
   }) as const;
@@ -46,7 +62,7 @@ let app = pipeline({
     ssh: (p, beta) =>
       p.stage(
         steps.helmDeployOverSsh({
-          ...deploy(beta),
+          ...deploy('beta', beta),
           name: 'deploy-beta',
           description: describeDeploy('beta'),
           target: beta,
@@ -56,7 +72,7 @@ let app = pipeline({
     inCluster: (p, beta) =>
       p.stage(
         steps.helmDeployInCluster({
-          ...deploy(beta),
+          ...deploy('beta', beta),
           name: 'deploy-beta',
           description: describeDeploy('beta'),
           target: beta,
@@ -70,7 +86,7 @@ let app = pipeline({
         ssh: (q, prod) =>
           q.stage(
             steps.helmDeployOverSsh({
-              ...deploy(prod),
+              ...deploy('prod', prod),
               name: 'deploy-prod',
               description: describeDeploy('prod'),
               target: prod,
@@ -80,7 +96,7 @@ let app = pipeline({
         inCluster: (q, prod) =>
           q.stage(
             steps.helmDeployInCluster({
-              ...deploy(prod),
+              ...deploy('prod', prod),
               name: 'deploy-prod',
               description: describeDeploy('prod'),
               target: prod,

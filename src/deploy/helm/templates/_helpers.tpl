@@ -7,6 +7,13 @@ The bundled Dex runs when auth.mode is dex, unless auth.bundled is false (an exi
 {{- end -}}
 
 {{/*
+The Secret holding the bundled Dex's GitHub app credentials: the chart's own from dex.github, else dex.githubSecret.
+*/}}
+{{- define "app.dexGitHubSecret" -}}
+{{- if .Values.dex.github -}}{{ .Release.Name }}-dex-github{{- else -}}{{ .Values.dex.githubSecret }}{{- end -}}
+{{- end -}}
+
+{{/*
 The server's settings: .Values.config, with .Values.auth (when set) mapped onto Auth__*. As YAML, for fromYaml.
   mode: none                       # Auth__Disable=true: every endpoint is anonymous
   mode: dex, issuer, bundled?, clientId?, frontendClientId?, allow: { subjects, users, orgs, emails }

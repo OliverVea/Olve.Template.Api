@@ -128,7 +128,8 @@ with `pl dev describe`.
    `/api/auth-config`, the SPA, an anonymous write answering 401).
 
 Any failure stops the run before prod; `deployTo=beta` stops after beta. Secrets are by name only
-(`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`, `BETA_TOKEN`, set with `pl secret set`). The pipeline
+(`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`, `BETA_TOKEN`, `DEX_GITHUB_SECRET_BETA`, `DEX_GITHUB_SECRET_PROD`, set with
+`pl secret set`). The pipeline
 follows the SDK's `beta` tag with no lockfile.
 
 A fresh deploy needs, per namespace:
@@ -139,10 +140,13 @@ A fresh deploy needs, per namespace:
 - **Sign-in.** The pipeline's `auth` config (per target: `target.<stage>.auth`), the same shape as
   Olve.Pipelines': `mode: dex`, `issuer: https://<host>/dex`, and `allow` (the chart refuses dex without
   one, since GitHub lets anyone sign in). The chart then runs Dex beside the app, which needs:
-  - a GitHub OAuth app with callback URL `https://<host>/dex/callback`, its id and secret in the
-    Secret `olve-template-api-dex` (keys `github-client-id`, `github-client-secret`);
+  - a GitHub OAuth app per stage with callback URL `https://<host>/dex/callback`: its Client ID in the
+    `dexBeta` / `dexProd` config (`clientId`, and `clientSecret: { secret: DEX_GITHUB_SECRET_BETA }` /
+    `_PROD`), its client secret as that pipeline secret. The chart renders the Secret Dex reads; each
+    deploy reads only its own stage's;
   - a `/dex` route on the app's host in `Olve.Homelab`, to the `olve-template-api-dex` Service, port 5556.
-  `bundled: false` uses an existing Dex at `issuer` instead, and needs neither: that Dex must list
+  `bundled: false` uses an existing Dex at `issuer` instead, and needs neither (the two `DEX_GITHUB_SECRET_*`
+  secrets must still be set, to anything, since the deploys declare them): that Dex must list
   `clientId` (default `olve-template-api`) as a public static client with `https://<host>/callback` as a
   redirect URI, and load GitHub groups if `allow.orgs` is set. beta-test then checks discovery at `issuer`.
 - **Beta's machine token.** A random `olve-template-api_<hex>` as the `BETA_TOKEN` secret, and its sha256

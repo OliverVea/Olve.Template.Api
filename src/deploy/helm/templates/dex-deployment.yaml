@@ -19,6 +19,8 @@ spec:
         app: {{ .Release.Name }}-dex
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/dex-configmap.yaml") . | sha256sum }}
+        # Restarts Dex when the GitHub app's credentials change.
+        checksum/github: {{ include (print $.Template.BasePath "/dex-secret.yaml") . | sha256sum }}
     spec:
       securityContext:
         fsGroup: 1001
@@ -31,12 +33,12 @@ spec:
             - name: GITHUB_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.dex.githubSecret }}
+                  name: {{ include "app.dexGitHubSecret" . }}
                   key: github-client-id
             - name: GITHUB_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.dex.githubSecret }}
+                  name: {{ include "app.dexGitHubSecret" . }}
                   key: github-client-secret
           ports:
             - name: http

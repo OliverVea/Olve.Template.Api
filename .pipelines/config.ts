@@ -1,4 +1,11 @@
-import { config, helmTarget, secret, z } from '@olivervea/pipelines';
+import {
+  config,
+  helmTarget,
+  secret,
+  secretRef,
+  z,
+  type Secret,
+} from '@olivervea/pipelines';
 
 export const GITHUB_TOKEN = secret(
   'GITHUB_TOKEN',
@@ -11,6 +18,14 @@ export const SSH_PRIVATE_KEY = secret(
 export const BETA_TOKEN = secret(
   'BETA_TOKEN',
   'Machine token of beta (its Auth:Tokens:beta-test): beta-test runs the API tests with it.',
+);
+export const DEX_GITHUB_SECRET_BETA = secret(
+  'DEX_GITHUB_SECRET_BETA',
+  "Client secret of beta's GitHub OAuth app, which beta's bundled Dex signs users in through.",
+);
+export const DEX_GITHUB_SECRET_PROD = secret(
+  'DEX_GITHUB_SECRET_PROD',
+  "Client secret of prod's GitHub OAuth app, which prod's bundled Dex signs users in through.",
 );
 //#if (false)
 // The template repo only: dotnet new drops everything up to #endif.
@@ -89,6 +104,22 @@ const Auth = z.discriminatedUnion('mode', [
     frontendAudience: z.string().optional(),
   }),
 ]);
+
+// The bundled Dex's GitHub OAuth app per stage (callback URL <issuer>/callback). The chart renders its
+// Secret; one entry per stage, so each deploy reads only its own stage's secret.
+const dexGitHub = <const N extends string>(stage: string, clientSecret: Secret<N>) =>
+  config(
+    `dex${stage}`,
+    `The GitHub OAuth app ${stage.toLowerCase()}'s bundled Dex signs users in through; unset with an existing Dex (auth.bundled: false).`,
+    z
+      .object({
+        clientId: z.string().describe("The GitHub OAuth app's Client ID."),
+        clientSecret: secretRef(clientSecret),
+      })
+      .optional(),
+  );
+export const DEX_BETA = dexGitHub('Beta', DEX_GITHUB_SECRET_BETA);
+export const DEX_PROD = dexGitHub('Prod', DEX_GITHUB_SECRET_PROD);
 
 export const AUTH = config('auth', 'How users sign in to the deployed service.', Auth);
 
