@@ -38,6 +38,8 @@ tools/check.sh [--full|--fix|--changed]                 # what the pipeline chec
 `git config core.hooksPath .githooks` runs `tools/check.sh --hook` before every push; Claude Code runs it
 from the `PreToolUse` hook in `.claude/settings.json`. The hook checks only what changed against the
 upstream branch (`--changed`): a docs-only push checks nothing, a backend-only push skips the frontend.
+`--full` limits a test run to 15 minutes and dumps a test host that is silent for 5, naming the hung
+tests.
 
 ### Configuration
 

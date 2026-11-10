@@ -17,5 +17,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.2" />
     <PackageVersion Include="Rocks" Version="10.3.4" />
     <PackageVersion Include="TUnit" Version="1.81.16" />
+    <!-- The hang dump for the pipeline's test run (tools/check.sh, full mode): a hung test host is dumped, naming the tests still running. Same version as TUnit's Microsoft.Testing.Platform. -->
+    <PackageVersion Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.2" />
   </ItemGroup>
 </Project>

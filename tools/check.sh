@@ -79,7 +79,9 @@ fi
 
 if [[ "$mode" == "--full" ]]; then
   step "tests"
-  dotnet test --no-build
+  # A hung test fails the run by name instead of stalling the pipeline step: a test host silent
+  # for 5 minutes is dumped with the tests still running, and the session ends after 15.
+  dotnet test --no-build --timeout 15m --hangdump --hangdump-timeout 5m
   (cd src/frontend && bun run test) # DELETE-WITH-THE-FRONTEND
 fi
 
