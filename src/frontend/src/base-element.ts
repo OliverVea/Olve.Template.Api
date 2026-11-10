@@ -15,7 +15,7 @@
  * ## Litify-later (opt-in, per component)
  *
  * Because every component is a standalone custom element, a component that outgrows this
- * can `npm i lit` and switch *its own* base to `LitElement` for auto-rerender + `lit-html`
+ * can `bun add lit` and switch *its own* base to `LitElement` for auto-rerender + `lit-html`
  * diffing, while the rest keep using `BaseElement`. Auto-rerender is always a reach-for-it
  * choice, never the baseline (DESIGN §2.3).
  */

@@ -1,75 +1,58 @@
 # CLAUDE.md
 
-See [README.md](README.md) for project structure, endpoints, configuration, CI examples, and client generation.
+Olve.Template.Api: a `dotnet new` template for a spec-first .NET API service. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the layout, build, configuration, contract, tests and deploy. The
+design is in [docs/design/](docs/design/): [architecture.md](docs/design/architecture.md) (tech decisions),
+[roadmap.md](docs/design/roadmap.md) (what's next).
+
+## How to work here
+
+- **Record only what the owner stated or agreed** in `docs/design/`. Proposals stay in chat until agreed.
+  Record each decision right away and commit it. A new answer that contradicts a row replaces that row.
+- Follow [`docs/STANDARDS.md`](docs/STANDARDS.md) (MUST/SHOULD rules for API behaviour, code and tests).
 
 ## Commands
 
 ```bash
-dotnet build                                                # Build
-dotnet test                                                 # Unit + API tests (API tests in-process)
-dotnet test -p:RunApiTests=false                            # Unit tests only
-dotnet run --project src/backend/Olve.Template.Api                  # Run locally
+dotnet build                                            # Build (compiles src/spec/ first; needs bun)
+dotnet test                                             # Unit + API tests (API tests in-process)
+dotnet run --project src/backend/Olve.Template.Api      # Run on localhost:5000
+cd src/frontend && bun run dev                          # The SPA on Vite, proxying /api to localhost:5000
+cd src/spec && bun run build                            # The contract alone → artifacts/
+tools/check.sh [--full|--fix|--changed]                 # What the pipeline checks; --fix formats first
+tools/api-image.sh                                      # API tests against the Docker image (the AOT check)
 ```
 
-`mise run ci` (or `npx mise run ci` without mise installed) is the pipeline gate: backend tests,
-the contract's client, frontend. `mise run api:image` runs the API tests against the Docker image
-(the AOT check; needs Docker), `API_BASE_URL=… mise run api:remote` against any running server.
+A `PreToolUse` hook runs `tools/check.sh --hook` before every `git push`: the checks for what changed
+against the upstream branch, blocking the push on a failure.
+
+## Deploy
+
+`.pipelines/pipeline.ts` on Olve.Pipelines (pipeline "Olve.Template.Api"): every push to `main` builds,
+runs `tools/check.sh --full`, deploys beta, runs the API tests there, then deploys prod and smoke-tests it
+read-only. The chart is ClusterIP-only; routes are registered in `Olve.Homelab`. Load the
+`ovea-olve-pipelines` skill before changing `.pipelines/` or running any `pl` command.
 
 ## Conventions
 
-- .NET 10, C# with file-scoped namespaces, nullable enabled, implicit usings
-- Package versions managed centrally in `Directory.Packages.props` — do not add `Version` attributes in csproj files
-- Local config via `dotnet user-secrets`, not appsettings files
-- The API is the TypeSpec contract in `src/spec/`: the build compiles it into `artifacts/` (gitignored: the C# surface, the OpenAPI document, the Hey API client). Nothing generated is committed. An API change is a change to the contract and the `[OperationHandler]` class behind the operation; a missing handler fails the build
-- API tests are raw HTTP behaviour tests that must pass against any target (`ApiTarget`); no C# client
-
-## Standards
-
-Follow [`docs/STANDARDS.md`](docs/STANDARDS.md) (MUST/SHOULD rules for API behaviour, code and tests).
-
-## Decisions are dated leanings
-
-Notes under `docs/` record *dated leanings*, not binding decisions. Use them to orient when in
-doubt, but before relying on one that predates the current work, confirm with Oliver that it
-still holds. When a leaning changes, rewrite the entry and its date.
-
-## Deployment (GitOps)
-
-This repo deploys via **Olve.Pipelines v2** — `.pipelines/pipeline.ts` (TypeScript, `@olivervea/pipelines`
-SDK) is the live deploy pipeline (single source of truth; pushing to `main` deploys). `source` →
-`build` (kaniko) ∥ `test` (`mise run ci`) → `deploy-beta` → `beta-test` (the API test suite
-against beta's in-cluster Service) → `deploy-prod` → `prod-test` (read-only smoke test); any
-failure stops the run before prod. The Helm chart is **ClusterIP-only**;
-public exposure is registered in the `Olve.Homelab` edge chart, not here. **Invoke the
-`ovea-olve-pipelines` skill** for the authoritative model (SDK, secrets, gates) before changing
-`.pipelines/` — don't re-derive it; check changes with `pl dev describe`. See
-[README.md](README.md#deployment-gitops) for the full write-up.
-
-**Homelab deploy gotchas** (each bit us on a real deploy; all validated against Olve.Pipelines):
-
-- **OTLP OAuth (prod only).** `otel-beta.ovea.pro` is **unauthenticated** (Tailscale) — beta clears
-  `OpenTelemetry__OAuth2__TokenUrl`/`ClientId` or the app crashes at startup. Prod OTLP auths as the
-  shared **`otel`** client, so its secret is the `authentik-oidc-secrets` key **`otel-client-secret`**
-  (NOT `<app>-client-secret` — a different client → `invalid_grant`).
-- **Authentik CA.** The chiseled base image can't validate `*.ovea.pro` TLS, so outbound HTTPS
-  (prod OTLP OAuth, JWKS, OpenBao) fails with "SSL connection could not be established". Mount the
-  shared `authentik-ca` configMap via `authentikCa.enabled` (`auth-prod-ca.crt`/`auth-beta-ca.crt`).
-- **Routing.** No route exists until the app is added to `Olve.Homelab`'s `values-{beta,prod}.yaml`
-  `apps:` list. Private/Tailscale host is `<app>-private.ovea.pro` (external-dns → `100.100.117.17`);
-  the pipeline's health checks use the in-cluster Service instead.
-- **Telemetry auth is opt-in, never fatal** — empty OAuth2 config disables it (see `TelemetryConfiguration`).
+- .NET 10 Native AOT, C# with file-scoped namespaces, nullable, warnings as errors.
+- Package versions only in `Directory.Packages.props`.
+- Local config via `dotnet user-secrets`, not appsettings files.
+- The API is the TypeSpec contract in `src/spec/`: the build compiles it into `artifacts/` (gitignored: the
+  C# surface, the OpenAPI document, the Hey API client). Nothing generated is committed. An API change is a
+  change to the contract and the `[OperationHandler]` class behind the operation.
+- Olve.Results everywhere; expected failures are declared contract responses, never exceptions.
+- API tests are raw HTTP behaviour tests that pass against any target (`ApiTarget`); no C# client.
+- Telemetry needs no credentials: JSON logs on stdout reach OpenObserve through the node collector. OTLP
+  export is plain OTLP (endpoint, protocol, headers from a Secret), off by default.
 
 ## References
 
-- [Olve.* packages](https://olivervea.github.io/Olve.Utilities/) ([GitHub](https://github.com/OliverVea/Olve.Utilities)) — index of all Olve packages
-  - [Olve.Results](https://olivervea.github.io/Olve.Utilities/src/Olve.Results/README.html) — non-throwing result types for error handling
-  - [Olve.Validation](https://olivervea.github.io/Olve.Utilities/src/Olve.Validation/README.html) — input validation built on Olve.Results
-  - [Olve.TypeSpec](https://github.com/OliverVea/Olve.Utilities/tree/master/src/Olve.TypeSpec) — runtime and MSBuild targets of the generated API surface
-  - [Olve.Utilities](https://olivervea.github.io/Olve.Utilities/src/Olve.Utilities/README.html) — identifiers, collections, graph types
-  - [Olve.Results.TUnit](https://olivervea.github.io/Olve.Utilities/src/Olve.Results.TUnit/README.html) — TUnit assertions for Result types (`Succeeded()`, `Failed()`, etc.)
-- [Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines) — GitOps CD service; deploy model for this repo's `.pipelines/`. Skill: `ovea-olve-pipelines`. This repo is on v2 prod: `pipelines-v2-private.ovea.pro`
-- [Olve.Homelab](https://github.com/OliverVea/Olve.Homelab) — edge chart that owns all Ingress; register an app's public host + service here, not in the app chart
-- [mise](https://mise.jdx.dev/) — toolchain pinning + task runner (`mise run ci`)
-- [TUnit](https://tunit.dev/docs/intro) — test framework, uses `await Assert.That(...)` fluent syntax (not xUnit/NUnit)
-- [Rocks](https://raw.githubusercontent.com/JasonBock/Rocks/refs/heads/main/docs/Overview.md) — source-generated mocking (AOT-compatible)
-- [TypeSpec](https://typespec.io) — the API contract; [Hey API](https://heyapi.dev) — the TypeScript client generated from its OpenAPI
+- [Olve.* packages](https://olivervea.github.io/Olve.Utilities/): Olve.Results, Olve.Validation, Olve.TypeSpec
+  (the generated API surface; skill `olve-typespec`), Olve.Utilities, Olve.Results.TUnit
+- [Olve.Pipelines](https://github.com/OliverVea/Olve.Pipelines): the deploy model for `.pipelines/` (skill
+  `ovea-olve-pipelines`, instance `pipelines-v2-private.ovea.pro`)
+- [Olve.Homelab](https://github.com/OliverVea/Olve.Homelab): the edge chart that owns every Ingress
+- [TUnit](https://tunit.dev/docs/intro) (`await Assert.That(...)`, not xUnit/NUnit),
+  [Rocks](https://github.com/JasonBock/Rocks) (source-generated mocks)
+- [TypeSpec](https://typespec.io), [Hey API](https://heyapi.dev), [bun](https://bun.sh)

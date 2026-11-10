@@ -1,0 +1,37 @@
+{
+  "extraKnownMarketplaces": {
+    "olve-packages": {
+      "source": {
+        "source": "github",
+        "repo": "OliverVea/Olve.Utilities",
+        "sparsePaths": [".claude-plugin", "olve-packages"]
+      }
+    },
+    "ovea-skills": {
+      "source": {
+        "source": "github",
+        "repo": "OliverVea/ovea-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "olve-packages@olve-packages": true,
+    "ovea-workflow@ovea-skills": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push*)",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/tools/check.sh --hook",
+            "timeout": 600,
+            "statusMessage": "Running the pipeline's checks before pushing"
+          }
+        ]
+      }
+    ]
+  }
+}

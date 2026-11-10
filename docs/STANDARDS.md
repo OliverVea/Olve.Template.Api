@@ -13,6 +13,8 @@ reason. Back a rule with a test where possible.
   fallback policy); an anonymous endpoint SHOULD say why in a comment when it isn't obvious.
 - `GET` MUST NOT have side effects beyond logging, metrics and tracing.
 - `PUT` and `DELETE` MUST be idempotent in effect: repeating one leaves the same state.
+- A `POST` that creates SHOULD accept an `Idempotency-Key` header: a retry with the same key answers
+  what the first request did instead of creating again.
 - Expected failures MUST be declared responses of the operation, never exceptions. They reach the
   client as a `Problem[]` body (`src/spec/errors.tsp`).
 - A missing resource (unknown id or key) MUST answer the declared 404; any other problem answers
@@ -33,7 +35,7 @@ reason. Back a rule with a test where possible.
 
 ## Tests
 
-- `mise run ci` is the gate: what passes locally passes in the pipeline, and the reverse.
+- `tools/check.sh --full` is the gate: the pipeline runs it, so what passes locally passes there, and the reverse.
 - API tests (`src/backend/Olve.Template.Api.ApiTests`) are behaviour tests over raw HTTP. They MUST run
   unchanged against any target (in-process, the Docker image, live beta), so they:
   - assert only on data they create themselves, never on counts or seeded data;

@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
-// The client generated from the contract (artifacts/, gitignored): `mise run client` writes it.
+// The client generated from the contract (artifacts/, gitignored): `cd src/spec && bun run build` writes it.
 const api = fileURLToPath(new URL("../../artifacts/clients/ts", import.meta.url));
 
 // In dev, the browser talks to the Vite dev server (same origin) and Vite proxies the
@@ -23,7 +23,7 @@ export default defineConfig(() => {
         "/api": { target, changeOrigin: true },
       },
     },
-    // Unit tests are opt-in (`npm test`) and live next to the source they cover
+    // Unit tests are opt-in (`bun run test`) and live next to the source they cover
     // (e.g. src/base-element.test.ts). happy-dom gives custom elements a shadow DOM.
     test: {
       environment: "happy-dom",

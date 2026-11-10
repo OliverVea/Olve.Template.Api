@@ -5,7 +5,7 @@ namespace Olve.Template.Api.Stores;
 /// </summary>
 /// <remarks>
 /// This module is written at library quality so it can be promoted to
-/// <c>Olve.Utilities.Hosting</c> with a near-mechanical copy/namespace swap (see docs/DESIGN.md §1.1.2).
+/// <c>Olve.Utilities.Hosting</c> with a near-mechanical copy/namespace swap (see docs/design/template.md §1.1.2).
 /// </remarks>
 public enum StorageMode
 {

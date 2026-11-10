@@ -16,7 +16,6 @@
   </Target>
 
   <ItemGroup>
-    <PackageReference Include="Duende.IdentityModel" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Olve.Results" />
     <PackageReference Include="Olve.TypeSpec" />

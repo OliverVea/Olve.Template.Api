@@ -47,10 +47,10 @@
         {
           "exclude": [
             ".git/**",
-            ".claude/**",
+            ".claude/settings.local.json",
             ".template.config/**",
             "TestResults/**",
-            "docs/DESIGN.md",
+            "docs/design/template.md",
             "artifacts/**",
             "data/**",
             "**/node_modules/**",
@@ -60,6 +60,25 @@
           ]
         }
       ]
+    }
+  ],
+  "postActions": [
+    {
+      "description": "Makes the scripts and the git hook executable (dotnet new drops file modes).",
+      "manualInstructions": [
+        {
+          "text": "Run 'chmod +x tools/*.sh .githooks/pre-push'"
+        }
+      ],
+      "actionId": "cb9a6cf3-4f5c-4860-b9d2-03a574959774",
+      "args": {
+        "+x": [
+          "tools/check.sh",
+          "tools/api-image.sh",
+          ".githooks/pre-push"
+        ]
+      },
+      "continueOnError": true
     }
   ]
 }

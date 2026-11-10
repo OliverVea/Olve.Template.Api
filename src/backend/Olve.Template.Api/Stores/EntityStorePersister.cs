@@ -8,7 +8,7 @@ namespace Olve.Template.Api.Stores;
 /// <summary>
 /// Persists an <see cref="EntityStore{T}"/> as a whole-snapshot blob: loads it on startup, saves a
 /// debounced snapshot on mutation, and flushes on shutdown. Encapsulates the safety lifecycle so it
-/// can never overwrite good state with empty (see docs/DESIGN.md §1.1.2).
+/// can never overwrite good state with empty (see docs/design/template.md §1.1.2).
 /// </summary>
 /// <remarks>
 /// <para>

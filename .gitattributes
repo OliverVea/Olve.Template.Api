@@ -1,0 +1,8 @@
+*.sh text eol=lf
+*.cs text eol=lf
+*.ts text eol=lf
+*.tsp text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+Dockerfile text eol=lf

@@ -25,6 +25,23 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- with .Values.telemetry }}
+            {{- if eq .exporter "otlp" }}
+            - name: OpenTelemetry__Endpoint
+              value: {{ required "telemetry.endpoint is required for exporter otlp" .endpoint | quote }}
+            - name: OpenTelemetry__Protocol
+              value: {{ .protocol | default "http" | quote }}
+            {{- with (.headers | default dict).kubernetesSecret }}
+            - name: OpenTelemetry__Headers
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name }}
+                  key: {{ .key }}
+            {{- end }}
+            {{- else if ne .exporter "none" }}
+            {{- fail (printf "telemetry.exporter must be none or otlp, got %q" .exporter) }}
+            {{- end }}
+            {{- end }}
             {{- range .Values.secrets }}
             {{- $secretName := .name }}
             {{- range $envVar, $key := .envMap }}

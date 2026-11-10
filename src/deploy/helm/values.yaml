@@ -35,35 +35,25 @@ config:
   # runtime from GET /api/auth-config. Defined as an Authentik blueprint in Olve.Authentik.
   Auth__Frontend__Authority: "https://auth.ovea.pro/application/o/olve-template-api-spa/"
   Auth__Frontend__ClientId: "olve-template-api-spa"
-  OpenTelemetry__Endpoint: "https://otel.ovea.pro"
-  OpenTelemetry__Protocol: "http"
-  OpenTelemetry__OAuth2__TokenUrl: "https://auth.ovea.pro/application/o/token/"
-  OpenTelemetry__OAuth2__ClientId: "otel"
+  # JSON lines on stdout: the homelab's node collector ships them to OpenObserve as queryable fields.
+  Logging__Console__FormatterName: "json"
 
-secrets:
-  - name: authentik-oidc-secrets
-    envMap:
-      # The OTLP exporter authenticates as the shared `otel` OAuth2 client, so its secret is the
-      # `otel` client's own secret (key otel-client-secret), NOT this app's client secret.
-      OpenTelemetry__OAuth2__ClientSecret: otel-client-secret
+# Extra env vars from existing Secrets: [{ name: <secret>, envMap: { <ENV_VAR>: <key> } }].
+secrets: []
+
+# Where the app exports traces, metrics and logs over OTLP. `none` = no exporter (logs still reach
+# OpenObserve through stdout). For a collector:
+#   exporter: otlp
+#   endpoint: http://collector:4318      # traces, metrics and logs under /v1/…
+#   protocol: http                       # or grpc
+#   headers:                             # only when the receiver needs a key
+#     kubernetesSecret: { name: otlp-headers, key: headers }   # "k1=v1,k2=v2"
+telemetry:
+  exporter: none
 
 # Mounts the Authentik CA (shared `authentik-ca` configMap in the namespace) so the app trusts
-# outbound TLS to *.ovea.pro (auth/OTel/OpenBao). Required in prod, where OTLP export authenticates
-# via OAuth2 over HTTPS to auth.ovea.pro. values-beta.yaml overrides fileName for the beta CA.
+# outbound TLS to *.ovea.pro: JWT validation fetches JWKS from Authentik. values-beta.yaml overrides
+# fileName for the beta CA.
 authentikCa:
   enabled: true
   fileName: auth-prod-ca.crt
-
-slo:
-  enabled: true
-  labels:
-    owner: "oliver"
-    tier: "2"
-  objectives:
-    availability:
-      target: 99.9
-      description: "HTTP requests should not return 5xx errors."
-    latency:
-      target: 99
-      threshold: "0.5"
-      description: "HTTP requests should complete within 500ms."

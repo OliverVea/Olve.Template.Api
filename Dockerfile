@@ -1,19 +1,19 @@
 # The contract: the C# surface, the OpenAPI document and the TS client, all under /repo/artifacts.
-FROM node:24-alpine AS spec
+FROM oven/bun:1.4.3 AS spec
 WORKDIR /repo/src/spec
 COPY src/spec/ ./
-RUN npm ci
-RUN npm run build
+RUN bun install --frozen-lockfile
+RUN bun run build
 
-# Build the SPA (src/frontend/dist) in a Node stage; it ships as static files in the app's wwwroot.
-# Delete this stage (and the wwwroot COPY below) for a headless service.
-FROM node:24-alpine AS frontend
+# The SPA (src/frontend/dist); it ships as static files in the app's wwwroot.
+# DELETE-WITH-THE-FRONTEND: this stage and the wwwroot COPY below.
+FROM oven/bun:1.4.3 AS frontend
 WORKDIR /repo/src/frontend
-COPY src/frontend/package.json src/frontend/package-lock.json ./
-RUN npm ci
+COPY src/frontend/package.json src/frontend/bun.lock ./
+RUN bun install --frozen-lockfile
 COPY src/frontend/ ./
 COPY --from=spec /repo/artifacts/clients ../../artifacts/clients
-RUN npm run build
+RUN bun run build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 RUN apt-get update && apt-get install -y clang zlib1g-dev
