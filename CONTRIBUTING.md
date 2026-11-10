@@ -122,7 +122,8 @@ with `pl dev describe`.
 1. `source` (the pushed commit), then `build` (kaniko, base images through the homelab pull-through
    caches) ∥ `test` (`tools/check.sh --full`).
 2. `deploy-beta` (Helm, `apps-beta`) → `beta-test`: the whole API test suite against beta's in-cluster
-   Service with beta's machine token (`BETA_TOKEN`, its hash in `values-beta.yaml`), and the SPA.
+   Service with beta's machine token (`BETA_TOKEN`), that beta's Dex answers discovery with the issuer
+   the SPA is given, and the SPA.
 3. `deploy-prod` (`apps`) → `prod-test`: read-only smoke test (`/health`, `/api/messages`,
    `/api/auth-config`, the SPA, an anonymous write answering 401).
 
@@ -141,8 +142,9 @@ A fresh deploy needs, per namespace:
   - a GitHub OAuth app with callback URL `https://<host>/dex/callback`, its id and secret in the
     Secret `olve-template-api-dex` (keys `github-client-id`, `github-client-secret`);
   - a `/dex` route on the app's host in `Olve.Homelab`, to the `olve-template-api-dex` Service, port 5556.
-- **Beta's machine token.** A random `olve-template-api_<hex>` as the `BETA_TOKEN` secret, its sha256 (hex)
-  as `Auth__Tokens__beta-test` in `values-beta.yaml`.
+- **Beta's machine token.** A random `olve-template-api_<hex>` as the `BETA_TOKEN` secret, and its sha256
+  (hex) in the beta target's config: `set: { config.Auth__Tokens__beta-test: <hex> }`. Per instance, never
+  in the repo: a generated service would otherwise accept the template's token.
 
 ## Versioning
 

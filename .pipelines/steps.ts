@@ -10,7 +10,7 @@ import { BETA_TOKEN } from './config';
 //#if (false)
 import { NUGET_API_KEY } from './config';
 //#endif
-import { smokeTest, waitHealthy } from './lib/smoke';
+import { checkBundledDex, smokeTest, waitHealthy } from './lib/smoke';
 import { DOTNET_ENV, DOTNET_SDK_IMAGE, installBun } from './lib/toolchain';
 
 export const test = implement(
@@ -37,7 +37,7 @@ export const betaTest = implement(
   step({
     name: 'beta-test',
     description:
-      'Runs the whole API test suite against beta in-cluster, with a machine token, and checks the SPA is served.',
+      "Runs the whole API test suite against beta in-cluster, with a machine token, and checks the SPA is served and beta's Dex answers discovery with the SPA's issuer.",
     image: DOTNET_SDK_IMAGE,
     input: { source: Source, release: HelmRelease },
     secrets: [BETA_TOKEN],
@@ -49,6 +49,7 @@ export const betaTest = implement(
     await installBun(ctx);
     await waitHealthy(ctx, url);
     await checkSpa(ctx, url);
+    await checkBundledDex(ctx, release, url);
     await ctx.exec(['dotnet', 'test', '--project', API_TESTS], {
       cwd: tree,
       env: { ...DOTNET_ENV, API_BASE_URL: url, API_TOKEN: ctx.secrets.BETA_TOKEN },

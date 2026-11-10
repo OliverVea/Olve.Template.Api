@@ -1,8 +1,6 @@
 # Beta overlay, applied on top of values.yaml through the beta target's `values` in the pipeline
 # config. Only the values that differ from prod for the apps-beta deploy.
 config:
-  # The pipeline's beta-test signs in with this machine token: the sha256 (hex) of its BETA_TOKEN secret.
-  Auth__Tokens__beta-test: "BETA_TOKEN_SHA256"
   # Debug the SPA login in beta: surface our JWT diagnostics (validated/challenge at Debug;
   # failures already log at Warning) plus the framework's own JwtBearer detail. Beta-only.
   Logging__LogLevel__Olve.Template.Api.Auth: "Debug"
