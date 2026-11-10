@@ -1,17 +1,20 @@
 // Every push goes beta, then prod. Where they are is the instance's config (config.ts).
-import { pipeline, steps } from '@olivervea/pipelines';
-import { GITHUB_TOKEN, IMAGE, SSH_PRIVATE_KEY, TARGET } from './config';
+import { pipeline, steps, type ConfigRef } from '@olivervea/pipelines';
+import { AUTH, GITHUB_TOKEN, IMAGE, SSH_PRIVATE_KEY, TARGET } from './config';
 import * as M from './models';
 import { betaTest, prodTest, test } from './steps';
 //#if (false)
 import { publishTemplate } from './steps';
 //#endif
 
-const deploy = {
-  chart: 'src/deploy/helm',
-  healthPath: '/health',
-  timeoutSeconds: 900,
-} as const;
+// The chart's `auth` value: the pipeline's `auth`, replaced by the target's own when it sets one.
+const deploy = (target: { auth: ConfigRef }) =>
+  ({
+    chart: 'src/deploy/helm',
+    inlineValues: [{ auth: AUTH }, { auth: target.auth }],
+    healthPath: '/health',
+    timeoutSeconds: 900,
+  }) as const;
 const describeDeploy = (stage: string) =>
   `Deploys this run's image to the ${stage} target with Helm and checks its health.`;
 
@@ -43,7 +46,7 @@ let app = pipeline({
     ssh: (p, beta) =>
       p.stage(
         steps.helmDeployOverSsh({
-          ...deploy,
+          ...deploy(beta),
           name: 'deploy-beta',
           description: describeDeploy('beta'),
           target: beta,
@@ -53,7 +56,7 @@ let app = pipeline({
     inCluster: (p, beta) =>
       p.stage(
         steps.helmDeployInCluster({
-          ...deploy,
+          ...deploy(beta),
           name: 'deploy-beta',
           description: describeDeploy('beta'),
           target: beta,
@@ -67,7 +70,7 @@ let app = pipeline({
         ssh: (q, prod) =>
           q.stage(
             steps.helmDeployOverSsh({
-              ...deploy,
+              ...deploy(prod),
               name: 'deploy-prod',
               description: describeDeploy('prod'),
               target: prod,
@@ -77,7 +80,7 @@ let app = pipeline({
         inCluster: (q, prod) =>
           q.stage(
             steps.helmDeployInCluster({
-              ...deploy,
+              ...deploy(prod),
               name: 'deploy-prod',
               description: describeDeploy('prod'),
               target: prod,

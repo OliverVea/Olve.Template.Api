@@ -11,7 +11,7 @@ namespace Olve.Template.Api.ApiTests;
 ///   <item>base-URL mode: when <c>API_BASE_URL</c> is set, any running server (a local
 ///   <c>dotnet run</c>, the Docker image via <c>tools/api-image.sh</c>, live beta via
 ///   <c>beta-test</c>). Authenticated tests use <c>API_TOKEN</c> as the bearer token when set (beta:
-///   a real Authentik token), else mint one with the server's <c>API_SIGNING_KEY</c>,
+///   its machine token), else mint one with the server's <c>API_SIGNING_KEY</c>,
 ///   <c>API_ISSUER</c> and <c>API_AUDIENCE</c>; with neither, tests that need a token are skipped.</item>
 /// </list>
 /// </summary>

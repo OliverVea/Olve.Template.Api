@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Olve.Template.Api.Configuration;
@@ -9,28 +10,39 @@ public static class AuthenticationConfiguration
 {
     public static void ConfigureAuthentication(this WebApplicationBuilder builder)
     {
+        // Auth:Disable (the chart's auth.mode none): every endpoint is anonymous. Local or trusted networks only.
+        if (builder.Configuration.GetValue<bool>("Auth:Disable"))
+        {
+            builder.Services.AddAuthentication().AddJwtBearer();
+            builder.Services.AddAuthorization();
+            return;
+        }
+
+        const string selector = "Bearer or machine token";
+        var tokens = MachineTokenOptions.From(builder.Configuration);
         builder.Services
-            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddAuthentication(selector)
+            .AddPolicyScheme(selector, null, o => o.ForwardDefaultSelector = http =>
+                MachineTokenHandler.Carries(http.Request) ? MachineTokenHandler.SchemeName : JwtBearerDefaults.AuthenticationScheme)
+            .AddScheme<MachineTokenOptions, MachineTokenHandler>(MachineTokenHandler.SchemeName, o => o.Hashes = tokens)
             .AddJwtBearer(options =>
             {
                 var authority = builder.Configuration["Auth:Authority"];
                 var audience = builder.Configuration["Auth:Audience"];
                 var signingKey = builder.Configuration["Auth:SigningKey"];
-                var frontendAuthority = builder.Configuration["Auth:Frontend:Authority"];
-                var frontendClientId = builder.Configuration["Auth:Frontend:ClientId"];
+                var frontendAuthority = builder.Configuration["Auth:FrontendAuthority"];
+                var frontendAudience = builder.Configuration["Auth:FrontendAudience"];
 
                 options.Authority = authority;
 
-                // The SPA logs in via its own PUBLIC Authentik provider, so its tokens carry that
-                // provider's `iss` and an `aud` of its own client id — both different from the
-                // resource provider's. Trust both issuers and both audiences (the SPA is this API's
-                // own frontend). Both providers share Authentik's signing key, so the Authority
-                // JWKS validates either signature; only the issuer/audience claims need widening.
+                // The SPA may log in as its own client (with Dex: a second static client; with Authentik:
+                // a second, public provider), so its tokens can carry another `iss` and `aud`. Trust both:
+                // the SPA is this API's own frontend.
                 var validIssuers = new[] { authority, frontendAuthority }
                     .Where(v => !string.IsNullOrWhiteSpace(v))
                     .Distinct()
                     .ToArray();
-                var validAudiences = new[] { audience, frontendClientId }
+                var validAudiences = new[] { audience, frontendAudience }
                     .Where(v => !string.IsNullOrWhiteSpace(v))
                     .Distinct()
                     .ToArray();
@@ -43,6 +55,12 @@ public static class AuthenticationConfiguration
                     ValidAudiences = validAudiences.Length > 0 ? validAudiences : null,
                     ValidateLifetime = true,
                 };
+
+                // A plain-HTTP OIDC provider (a local Dex) needs Auth:RequireHttpsMetadata=false.
+                if (!builder.Configuration.GetValue("Auth:RequireHttpsMetadata", true))
+                {
+                    options.RequireHttpsMetadata = false;
+                }
 
                 if (builder.Environment.IsDevelopment())
                 {
@@ -63,55 +81,74 @@ public static class AuthenticationConfiguration
                     options.TokenValidationParameters.ValidateIssuerSigningKey = true;
                 }
 
-                // Diagnostics for the SPA login: a rejected bearer is otherwise a silent 401.
-                // Failures log at Warning (visible everywhere) with the IDX reason + the token's
-                // iss/aud/kid so a mismatch against ValidIssuers/ValidAudiences is obvious; the
-                // happy path logs at Debug (enable via Logging:LogLevel in beta). Never the token.
-                options.Events = new JwtBearerEvents
-                {
-                    OnAuthenticationFailed = context =>
-                    {
-                        var logger = context.HttpContext.RequestServices
-                            .GetRequiredService<ILoggerFactory>()
-                            .CreateLogger("Olve.Template.Api.Auth");
-                        var (iss, aud, kid) = DescribeToken(context.Request);
-                        logger.LogWarning(context.Exception,
-                            "JWT auth failed: {Reason} | token iss={Iss} aud={Aud} kid={Kid} | expected iss=[{ValidIssuers}] aud=[{ValidAudiences}]",
-                            context.Exception.Message, iss, aud, kid,
-                            string.Join(", ", validIssuers), string.Join(", ", validAudiences));
-                        return Task.CompletedTask;
-                    },
-                    OnChallenge = context =>
-                    {
-                        var logger = context.HttpContext.RequestServices
-                            .GetRequiredService<ILoggerFactory>()
-                            .CreateLogger("Olve.Template.Api.Auth");
-                        logger.LogDebug(
-                            "JWT challenge on {Path}: error={Error} desc={Desc}",
-                            context.Request.Path, context.Error, context.ErrorDescription);
-                        return Task.CompletedTask;
-                    },
-                    OnTokenValidated = context =>
-                    {
-                        var logger = context.HttpContext.RequestServices
-                            .GetRequiredService<ILoggerFactory>()
-                            .CreateLogger("Olve.Template.Api.Auth");
-                        var principal = context.Principal;
-                        logger.LogDebug("JWT validated: iss={Iss} aud={Aud} sub={Sub}",
-                            principal?.FindFirst("iss")?.Value,
-                            string.Join(",", principal?.FindAll("aud").Select(c => c.Value) ?? []),
-                            principal?.FindFirst("sub")?.Value);
-                        return Task.CompletedTask;
-                    },
-                };
+                options.Events = DiagnosticEvents(validIssuers, validAudiences);
             });
 
+        var allow = AuthAllowList.From(builder.Configuration);
+        var signedIn = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .RequireAssertion(ctx => ctx.User.HasClaim(c => c.Type == MachineTokenHandler.NameClaim) || allow.Allows(ctx.User) || Refused(ctx))
+            .Build();
+
         builder.Services.AddAuthorizationBuilder()
-            .SetFallbackPolicy(
-                new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .Build());
+            .SetDefaultPolicy(signedIn)
+            .SetFallbackPolicy(signedIn);
     }
+
+    // A valid token outside Auth:Allow answers 403. Logs the stable subject id, so an admin can put it in
+    // Auth:Allow:Subjects.
+    private static bool Refused(AuthorizationHandlerContext ctx)
+    {
+        if (ctx.User.Identity?.IsAuthenticated == true && ctx.Resource is HttpContext http)
+        {
+            http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Olve.Template.Api.Auth")
+                .LogWarning("Refused '{Username}' (subject '{Subject}'): not in Auth:Allow",
+                    ctx.User.FindFirst("preferred_username")?.Value, AuthAllowList.Subject(ctx.User));
+        }
+
+        return false;
+    }
+
+    // Diagnostics for the SPA login: a rejected bearer is otherwise a silent 401. Failures log at Warning
+    // (visible everywhere) with the IDX reason + the token's iss/aud/kid so a mismatch against
+    // ValidIssuers/ValidAudiences is obvious; the happy path logs at Debug. Never the token.
+    private static JwtBearerEvents DiagnosticEvents(string?[] validIssuers, string?[] validAudiences) => new()
+    {
+        OnAuthenticationFailed = context =>
+        {
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("Olve.Template.Api.Auth");
+            var (iss, aud, kid) = DescribeToken(context.Request);
+            logger.LogWarning(context.Exception,
+                "JWT auth failed: {Reason} | token iss={Iss} aud={Aud} kid={Kid} | expected iss=[{ValidIssuers}] aud=[{ValidAudiences}]",
+                context.Exception.Message, iss, aud, kid,
+                string.Join(", ", validIssuers), string.Join(", ", validAudiences));
+            return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("Olve.Template.Api.Auth");
+            logger.LogDebug(
+                "JWT challenge on {Path}: error={Error} desc={Desc}",
+                context.Request.Path, context.Error, context.ErrorDescription);
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("Olve.Template.Api.Auth");
+            var principal = context.Principal;
+            logger.LogDebug("JWT validated: iss={Iss} aud={Aud} sub={Sub}",
+                principal?.FindFirst("iss")?.Value,
+                string.Join(",", principal?.FindAll("aud").Select(c => c.Value) ?? []),
+                principal?.FindFirst("sub")?.Value);
+            return Task.CompletedTask;
+        },
+    };
 
     public static void MapAuthentication(this WebApplication app)
     {

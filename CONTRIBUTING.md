@@ -50,8 +50,12 @@ Sources, highest first: command-line args (`--Port 9090`), user secrets (`dotnet
 |-----|---------|-------------|
 | `Host` | `localhost` | Listen address |
 | `Port` | `5000` | Listen port |
-| `Auth:Authority` | `https://auth.ovea.pro/...` | OIDC authority (Authentik) |
-| `Auth:Audience` | `olve-template-api` | JWT audience |
+| `Auth:Authority` | — | OIDC issuer (deployed: the bundled Dex, `https://<host>/dex`) |
+| `Auth:Audience` | — | JWT audience (the Dex client id) |
+| `Auth:FrontendAuthority`, `Auth:FrontendAudience` | — | The SPA's issuer and client id when they differ; also trusted |
+| `Auth:Allow:{Subjects,Users,Orgs,Emails}:<n>` | — | Who may sign in (GitHub logins, orgs or `org:team`, verified emails, `sub`); empty = any valid token |
+| `Auth:Tokens:<name>` | — | sha256 (hex) of a machine token (`olve-template-api_…`), which acts as `<name>` past the allow-list |
+| `Auth:Disable` | `false` | Every endpoint anonymous (the chart's `auth.mode: none`) |
 | `Auth:SigningKey` | — | Local HS256 key (bypasses OIDC, for dev and tests) |
 | `Logging:Console:FormatterName` | `simple` | `json` for JSON lines (the chart sets it) |
 | `OpenTelemetry:Endpoint` | — | OTLP endpoint (traces, metrics and logs under `/v1/…`); unset or empty = no exporter |
@@ -118,12 +122,12 @@ with `pl dev describe`.
 1. `source` (the pushed commit), then `build` (kaniko, base images through the homelab pull-through
    caches) ∥ `test` (`tools/check.sh --full`).
 2. `deploy-beta` (Helm, `apps-beta`) → `beta-test`: the whole API test suite against beta's in-cluster
-   Service with a token from beta Authentik's `olve-template-api-tests` machine client, and the SPA.
+   Service with beta's machine token (`BETA_TOKEN`, its hash in `values-beta.yaml`), and the SPA.
 3. `deploy-prod` (`apps`) → `prod-test`: read-only smoke test (`/health`, `/api/messages`,
    `/api/auth-config`, the SPA, an anonymous write answering 401).
 
 Any failure stops the run before prod; `deployTo=beta` stops after beta. Secrets are by name only
-(`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`, `API_TEST_CLIENT_SECRET`, set with `pl secret set`). The pipeline
+(`GITHUB_TOKEN`, `SSH_PRIVATE_KEY`, `BETA_TOKEN`, set with `pl secret set`). The pipeline
 follows the SDK's `beta` tag with no lockfile.
 
 A fresh deploy needs, per namespace:
@@ -131,9 +135,14 @@ A fresh deploy needs, per namespace:
 - **A route.** The chart has no Ingress: add the app to `Olve.Homelab`'s `values-{beta,prod}.yaml`
   `apps:` list (host `<app>-private.ovea.pro`, external-dns target `100.100.117.17`). The pipeline's
   checks use the in-cluster Service, so they don't need it.
-- **The Authentik CA.** The chiseled image can't validate `*.ovea.pro` TLS, and JWT validation fetches
-  JWKS from Authentik, so the chart mounts the shared `authentik-ca` configMap (`authentikCa`).
-- **Authentik applications** for the API and the SPA (in Olve.Authentik), and the beta machine client.
+- **Sign-in.** The pipeline's `auth` config (per target: `target.<stage>.auth`), the same shape as
+  Olve.Pipelines': `mode: dex`, `issuer: https://<host>/dex`, and `allow` (the chart refuses dex without
+  one, since GitHub lets anyone sign in). The chart then runs Dex beside the app, which needs:
+  - a GitHub OAuth app with callback URL `https://<host>/dex/callback`, its id and secret in the
+    Secret `olve-template-api-dex` (keys `github-client-id`, `github-client-secret`);
+  - a `/dex` route on the app's host in `Olve.Homelab`, to the `olve-template-api-dex` Service, port 5556.
+- **Beta's machine token.** A random `olve-template-api_<hex>` as the `BETA_TOKEN` secret, its sha256 (hex)
+  as `Auth__Tokens__beta-test` in `values-beta.yaml`.
 
 ## Versioning
 

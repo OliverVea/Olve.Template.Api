@@ -65,11 +65,11 @@ Login is a hand-rolled, dependency-free **Authorization Code + PKCE** flow in
 
 - **Config is fetched at runtime** from `GET /api/auth-config` (`{ authority, clientId, scopes }`)
   — *not* baked into the bundle, so one build serves beta and prod, each pointing at its own
-  Authentik. The authority's `.well-known/openid-configuration` supplies the authorize/token URLs.
-- **Log in** → PKCE challenge → redirect to Authentik → back to `/callback` → code exchanged for
+  Dex. The authority's `.well-known/openid-configuration` supplies the authorize/token URLs.
+- **Log in** → PKCE challenge → redirect to Dex (and on to GitHub) → back to `/callback` → code exchanged for
   tokens. The **access token** is kept in memory; the **refresh token** in `localStorage` so a
   reload doesn't force re-login. Tokens refresh **proactively** (before expiry) and on a **401**
-  (refresh + retry once). **Log out** clears local state and ends the Authentik SSO session.
+  (refresh + retry once). **Log out** clears local state (and ends the provider's session when it has an end-session endpoint; Dex has none).
 - Storage is isolated to `store()`/`load()` in `oidc.ts` — swap it (memory-only, or a
   backend-for-frontend httpOnly cookie, which is strictly safer) without touching the flow.
 
@@ -77,23 +77,14 @@ Login is a hand-rolled, dependency-free **Authorization Code + PKCE** flow in
 > refresh token. That's the accepted SPA tradeoff; the safer option is a BFF where the backend
 > holds tokens and the browser only gets an httpOnly session cookie.
 
-### Authentik setup this needs
+### The provider this needs
 
-The SPA authenticates as a **public** (PKCE, no secret) client, separate from the confidential
-client used for machine/CI tokens. In the homelab this is declared as an Authentik **blueprint**
-in [`Olve.Authentik`](https://github.com/OliverVea/Olve.Authentik) (GitOps — not created by hand)
-as `olve-template-api-spa`, alongside the existing `olve-template-api` provider. The provider:
-
-- **Client type:** Public. **Client ID:** `olve-template-api-spa` (matches `Auth__Frontend__ClientId`).
-- **Redirect URIs:** `http://localhost:5173/callback` (dev) and `https://<deployed-host>/callback`.
-- **Scopes / mappings:** `openid`, `email`, `profile`, `offline_access` (the last yields a refresh token).
-- **Signing key:** the same certificate as the `olve-template-api` provider, so the API's existing
-  JWKS validates its signatures.
-
-Its tokens carry this provider's own `iss` and an `aud` of `olve-template-api-spa` — both different
-from the resource provider's. The API trusts **both** issuers and **both** audiences (the SPA is
-its own frontend), so no Authentik audience remapping is needed. See `Auth__Frontend__*` in the
-Helm values and `AuthenticationConfiguration`.
+Deployed, the SPA signs in through the chart's **bundled Dex** (`auth.mode: dex`), served under `/dex` on
+the app's own host, with GitHub as the upstream. The chart registers the SPA as Dex's public (PKCE, no
+secret) static client, `olve-template-api` (`auth.clientId`), with `https://<host>/callback` as its
+redirect URI; `dex.extraRedirectURIs` adds more (e.g. `http://localhost:5173/callback` for a local Vite
+against a deployed Dex). Scopes are `openid profile email offline_access` (the last yields a refresh
+token), plus `groups` when `auth.allow.orgs` is set. A signed-in user outside `auth.allow` gets `403`.
 
 ## Build
 

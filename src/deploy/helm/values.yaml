@@ -22,19 +22,42 @@ resources:
     cpu: 500m
     memory: 256Mi
 
+# How users sign in, mapped onto config.Auth__* (templates/_helpers.tpl). Empty = config.Auth__* as given.
+#   mode: none                       # Auth__Disable=true: every endpoint is anonymous
+#   mode: dex                        # the bundled Dex below, GitHub upstream
+#     issuer: https://<host>/dex
+#     clientId: olve-template-api    # the SPA's public client; default the chart name
+#     allow: { users: [<github login>], orgs: [<org or org:team>], emails: [], subjects: [] }
+#   mode: authentik, authority, audience, frontendAuthority?, frontendAudience?
+# Required, here or as config.Auth__*: the chart refuses to render without auth, and dex without allow.
+# The pipeline sets it from its `auth` config (per target with target.<stage>.auth).
+auth: {}
+
+# Bundled Dex (OIDC with a GitHub upstream), rendered when auth.mode is dex and served under /dex on
+# the app's host: the edge (Olve.Homelab) routes <host>/dex to the <release>-dex Service. The GitHub
+# OAuth app's credentials come from githubSecret (keys github-client-id, github-client-secret); its
+# callback URL is <auth.issuer>/callback. enabled: false uses a Dex run elsewhere.
+dex:
+  enabled: true
+  image: "dexidp/dex:v2.43.1"
+  githubSecret: olve-template-api-dex
+  # More redirect URIs for the SPA client, e.g. http://localhost:5173/callback for a local Vite.
+  extraRedirectURIs: []
+  storage: 1Gi
+  storageClass: ""
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
 config:
   Host: "0.0.0.0"
   Port: "5000"
   Logging__LogLevel__Default: "Information"
   Logging__LogLevel__Microsoft.AspNetCore: "Warning"
-  Auth__Authority: "https://auth.ovea.pro/application/o/olve-template-api/"
-  Auth__Audience: "olve-template-api"
-  # Public PKCE client the SPA logs in as (separate from the confidential client used for machine
-  # tokens). Its tokens carry this provider's `iss` and an `aud` of its own client id, so
-  # AuthenticationConfiguration trusts both issuers AND both audiences. The SPA reads these at
-  # runtime from GET /api/auth-config. Defined as an Authentik blueprint in Olve.Authentik.
-  Auth__Frontend__Authority: "https://auth.ovea.pro/application/o/olve-template-api-spa/"
-  Auth__Frontend__ClientId: "olve-template-api-spa"
   # JSON lines on stdout: the homelab's node collector ships them to OpenObserve as queryable fields.
   Logging__Console__FormatterName: "json"
 
@@ -50,10 +73,3 @@ secrets: []
 #     kubernetesSecret: { name: otlp-headers, key: headers }   # "k1=v1,k2=v2"
 telemetry:
   exporter: none
-
-# Mounts the Authentik CA (shared `authentik-ca` configMap in the namespace) so the app trusts
-# outbound TLS to *.ovea.pro: JWT validation fetches JWKS from Authentik. values-beta.yaml overrides
-# fileName for the beta CA.
-authentikCa:
-  enabled: true
-  fileName: auth-prod-ca.crt

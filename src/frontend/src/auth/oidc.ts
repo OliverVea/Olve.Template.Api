@@ -13,7 +13,7 @@
  *
  * ## Config comes from the API at runtime
  * `GET /api/auth-config` returns `{ authority, clientId, scopes }` — not baked into the bundle,
- * because one image serves multiple Authentik environments (beta/prod). The authority's
+ * because one image serves several OIDC environments (beta/prod, each with its own Dex). The authority's
  * `.well-known/openid-configuration` supplies the authorize/token/end-session endpoints.
  */
 
@@ -212,7 +212,7 @@ export async function init(): Promise<boolean> {
   return isAuthenticated();
 }
 
-/** Start a login: build the PKCE challenge, stash the verifier, and redirect to Authentik. */
+/** Start a login: build the PKCE challenge, stash the verifier, and redirect to the OIDC provider. */
 export async function login(): Promise<void> {
   if (!config || !discovery) throw new Error("OIDC not initialized");
   const cfg = config;
@@ -279,7 +279,7 @@ export function getUser(): User | null {
   return user;
 }
 
-/** Clear local session and, if the provider supports it, end the Authentik SSO session too. */
+/** Clear local session and, if the provider supports it, end its SSO session too (Dex has no end-session endpoint). */
 export function logout(): void {
   const endSession = discovery?.end_session_endpoint;
   clearSession();

@@ -1,17 +1,9 @@
 # Beta overlay, applied on top of values.yaml through the beta target's `values` in the pipeline
 # config. Only the values that differ from prod for the apps-beta deploy.
 config:
-  # Beta Authentik, used for API JWT validation (bearer tokens on protected endpoints).
-  Auth__Authority: "https://auth-beta.ovea.pro/application/o/olve-template-api/"
-  Auth__Audience: "olve-template-api"
-  # Beta public PKCE client for the SPA login (see values.yaml for the rationale).
-  Auth__Frontend__Authority: "https://auth-beta.ovea.pro/application/o/olve-template-api-spa/"
-  Auth__Frontend__ClientId: "olve-template-api-spa"
+  # The pipeline's beta-test signs in with this machine token: the sha256 (hex) of its BETA_TOKEN secret.
+  Auth__Tokens__beta-test: "BETA_TOKEN_SHA256"
   # Debug the SPA login in beta: surface our JWT diagnostics (validated/challenge at Debug;
   # failures already log at Warning) plus the framework's own JwtBearer detail. Beta-only.
   Logging__LogLevel__Olve.Template.Api.Auth: "Debug"
   Logging__LogLevel__Microsoft.AspNetCore.Authentication: "Debug"
-
-# Beta uses the beta Authentik CA (JWKS from auth-beta.ovea.pro).
-authentikCa:
-  fileName: auth-beta-ca.crt

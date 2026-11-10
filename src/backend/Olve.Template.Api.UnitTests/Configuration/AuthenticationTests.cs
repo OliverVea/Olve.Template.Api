@@ -1,0 +1,192 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
+using Olve.Template.Api.Configuration;
+
+namespace Olve.Template.Api.UnitTests.Configuration;
+
+// Who gets in: a valid token of an allowed user, or a known machine token. Hosted in-process per test,
+// so the allow-list and token settings can differ per row; the API tests can't vary them per target.
+public class AuthenticationTests
+{
+    private const string Issuer = "https://issuer.test";
+    private const string FrontendIssuer = "https://frontend-issuer.test";
+    private const string Audience = "olve-template-api";
+    private const string FrontendAudience = "olve-template-api-spa";
+    private const string MachineToken = MachineTokenHandler.Prefix + "0123456789abcdef0123456789abcdef";
+    private static readonly string SigningKey = new('k', 64);
+
+    private static ClaimsPrincipal User(params (string Type, string Value)[] claims) =>
+        new(new ClaimsIdentity(claims.Select(c => new Claim(c.Type, c.Value)), "test"));
+
+    private static AuthAllowList Allow(string[]? users = null, string[]? orgs = null, string[]? emails = null, string[]? subjects = null) =>
+        new(subjects ?? [], users ?? [], orgs ?? [], emails ?? []);
+
+    [Test]
+    public async Task Empty_AllowsAnyone() =>
+        await Assert.That(Allow().Allows(User(("preferred_username", "someone")))).IsTrue();
+
+    [Test]
+    public async Task Users_MatchPreferredUsername_IgnoringCase()
+    {
+        var allow = Allow(users: ["OliverVea"]);
+        await Assert.That(allow.Allows(User(("preferred_username", "olivervea")))).IsTrue();
+        await Assert.That(allow.Allows(User(("preferred_username", "someone")))).IsFalse();
+        await Assert.That(allow.Allows(User(("sub", "OliverVea")))).IsFalse();
+    }
+
+    // Catches: an allow-list entry that a renamed-and-re-registered login would still satisfy.
+    [Test]
+    public async Task Subjects_MatchSubExactly_NotTheLogin()
+    {
+        var allow = Allow(subjects: ["CgcxMjM0NTY3EgZnaXRodWI"]);
+        await Assert.That(allow.Allows(User(("sub", "CgcxMjM0NTY3EgZnaXRodWI"), ("preferred_username", "anyone")))).IsTrue();
+        await Assert.That(allow.Allows(User((ClaimTypes.NameIdentifier, "CgcxMjM0NTY3EgZnaXRodWI")))).IsTrue();
+        await Assert.That(allow.Allows(User(("sub", "cgcxmjm0nty3egznaxrodwi")))).IsFalse();
+        await Assert.That(allow.Allows(User(("preferred_username", "CgcxMjM0NTY3EgZnaXRodWI")))).IsFalse();
+    }
+
+    [Test]
+    public async Task Orgs_MatchTheOrgOrAnyOfItsTeams_AndOrgTeamOnlyThatTeam()
+    {
+        await Assert.That(Allow(orgs: ["ovea"]).Allows(User(("groups", "ovea:admins")))).IsTrue();
+        await Assert.That(Allow(orgs: ["ovea"]).Allows(User(("groups", "ovea")))).IsTrue();
+        await Assert.That(Allow(orgs: ["ovea"]).Allows(User(("groups", "oveax")))).IsFalse();
+        await Assert.That(Allow(orgs: ["ovea:admins"]).Allows(User(("groups", "ovea:admins")))).IsTrue();
+        await Assert.That(Allow(orgs: ["ovea:admins"]).Allows(User(("groups", "ovea:guests")))).IsFalse();
+    }
+
+    // Catches: an empty list read as "no restriction" for its own kind (All on an empty list is true).
+    [Test]
+    [Arguments("groups", "ovea")]
+    [Arguments("email", "me@example.com")]
+    public async Task AClaimWithoutAListOfItsKind_AdmitsNobody(string claim, string value) =>
+        await Assert.That(Allow(users: ["olivervea"]).Allows(User((claim, value), ("email_verified", "true")))).IsFalse();
+
+    [Test]
+    public async Task Emails_NeedAVerifiedEmail()
+    {
+        var allow = Allow(emails: ["me@example.com"]);
+        await Assert.That(allow.Allows(User(("email", "me@example.com"), ("email_verified", "true")))).IsTrue();
+        await Assert.That(allow.Allows(User(("email", "me@example.com"), ("email_verified", "false")))).IsFalse();
+        await Assert.That(allow.Allows(User(("email", "me@example.com")))).IsFalse();
+    }
+
+    // Catches: an Orgs allow-list that can never match because the SPA never asks for the groups claim,
+    // or a login without a refresh token.
+    [Test]
+    public async Task LoginScopes_AskForARefreshToken_AndGroupsOnlyWhenOrgsAreAllowed()
+    {
+        await Assert.That(AuthConfigHandler.Scopes(Allow(orgs: ["ovea"]))).IsEqualTo("openid profile email offline_access groups");
+        await Assert.That(AuthConfigHandler.Scopes(Allow(users: ["olivervea"]))).IsEqualTo("openid profile email offline_access");
+    }
+
+    // Catches: any certificate accepted on the OIDC backchannel in production, or tokens fetched over plain HTTP.
+    [Test]
+    [Arguments("Production", null, true, false)]
+    [Arguments("Production", "false", false, false)]
+    [Arguments("Development", null, false, true)]
+    public async Task OidcChecks_StayOn_OutsideDevelopment(string environment, string? requireHttps, bool expectHttps, bool expectLaxCertificates)
+    {
+        var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions { EnvironmentName = environment });
+        builder.Configuration["Auth:Authority"] = Issuer;
+        builder.Configuration["Auth:Audience"] = Audience;
+        builder.Configuration["Auth:RequireHttpsMetadata"] = requireHttps;
+        builder.Services.AddLogging();
+
+        builder.ConfigureAuthentication();
+
+        var options = builder.Services.BuildServiceProvider().GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        await Assert.That(options.RequireHttpsMetadata).IsEqualTo(expectHttps);
+        await Assert.That(options.BackchannelHttpHandler is not null).IsEqualTo(expectLaxCertificates);
+    }
+
+    [Test]
+    [Arguments(Issuer, Audience, false, HttpStatusCode.OK)]
+    [Arguments(FrontendIssuer, Audience, false, HttpStatusCode.OK)]
+    [Arguments(Issuer, FrontendAudience, false, HttpStatusCode.OK)]
+    [Arguments(Issuer, Audience, true, HttpStatusCode.Unauthorized)]
+    [Arguments("https://elsewhere.test", Audience, false, HttpStatusCode.Unauthorized)]
+    [Arguments(Issuer, "another-client", false, HttpStatusCode.Unauthorized)]
+    public async Task TokenOfAnAllowedUser_NeedsAKnownIssuerAndAudience_AndToBeUnexpired(string issuer, string audience, bool expired, HttpStatusCode expected) =>
+        await Assert.That(await Send(Token("OliverVea", issuer, audience, expired), allowedUsers: ["OliverVea"])).IsEqualTo(expected);
+
+    [Test]
+    [Arguments("OliverVea", new[] { "OliverVea" }, HttpStatusCode.OK)]
+    [Arguments("someone", new[] { "OliverVea" }, HttpStatusCode.Forbidden)]
+    [Arguments("someone", new string[0], HttpStatusCode.OK)]
+    public async Task ValidToken_GetsIn_OnlyWhenTheAllowListHasTheUser_OrIsEmpty(string user, string[] allowedUsers, HttpStatusCode expected) =>
+        await Assert.That(await Send(Token(user), allowedUsers)).IsEqualTo(expected);
+
+    [Test]
+    [Arguments(MachineToken, HttpStatusCode.OK)]
+    [Arguments(MachineTokenHandler.Prefix + "wrong", HttpStatusCode.Unauthorized)]
+    [Arguments(null, HttpStatusCode.Unauthorized)]
+    public async Task MachineToken_GetsIn_PastTheAllowList_WhenKnown(string? bearer, HttpStatusCode expected) =>
+        await Assert.That(await Send(bearer, allowedUsers: ["OliverVea"])).IsEqualTo(expected);
+
+    [Test]
+    public async Task AuthDisabled_LetsAnonymousRequestsIn() =>
+        await Assert.That(await Send(null, allowedUsers: ["OliverVea"], disable: true)).IsEqualTo(HttpStatusCode.OK);
+
+    // A write behind the fallback policy, as the API's protected endpoints are.
+    private static async Task<HttpStatusCode> Send(string? bearer, string[] allowedUsers, bool disable = false)
+    {
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Configuration["Auth:Disable"] = disable ? "true" : null;
+        builder.Configuration["Auth:Authority"] = Issuer;
+        builder.Configuration["Auth:Audience"] = Audience;
+        builder.Configuration["Auth:FrontendAuthority"] = FrontendIssuer;
+        builder.Configuration["Auth:FrontendAudience"] = FrontendAudience;
+        builder.Configuration["Auth:SigningKey"] = SigningKey;
+        builder.Configuration["Auth:Tokens:beta-test"] = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(MachineToken)));
+        for (var i = 0; i < allowedUsers.Length; i++)
+        {
+            builder.Configuration[$"Auth:Allow:Users:{i}"] = allowedUsers[i];
+        }
+
+        builder.ConfigureAuthentication();
+
+        await using var app = builder.Build();
+        app.MapAuthentication();
+        app.MapPost("/api/write", () => "ok");
+        await app.StartAsync();
+
+        using var client = app.GetTestClient();
+        if (bearer is not null)
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+        }
+
+        using var response = await client.PostAsync("/api/write", null);
+        return response.StatusCode;
+    }
+
+    // The hour is well past JwtBearer's five minutes of clock skew. NotBefore stays before Expires, so an
+    // expired token is refused for its lifetime alone.
+    private static string Token(string user, string issuer = Issuer, string audience = Audience, bool expired = false)
+    {
+        var expires = DateTime.UtcNow.AddHours(expired ? -1 : 1);
+        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = issuer,
+            Audience = audience,
+            Claims = new Dictionary<string, object> { ["preferred_username"] = user },
+            IssuedAt = expires.AddHours(-1),
+            NotBefore = expires.AddHours(-1),
+            Expires = expires,
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey)), SecurityAlgorithms.HmacSha256),
+        });
+    }
+}
