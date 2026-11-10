@@ -17,17 +17,21 @@ import { betaTest, prodTest, test } from './steps';
 import { publishTemplate } from './steps';
 //#endif
 
-// The chart's `auth` value: the pipeline's `auth`, replaced by the target's own when it sets one. Each
-// stage may read only its own GitHub OAuth secret (auth.github.clientSecret).
-const DEX_SECRET = {
-  beta: DEX_GITHUB_SECRET_BETA,
-  prod: DEX_GITHUB_SECRET_PROD,
+// The chart's `auth` value: the pipeline's `auth`, replaced by the target's own when it sets one, and
+// the stage's GitHub OAuth app for the bundled Dex (dex.github). Each deploy reads only its own stage's.
+const DEX = {
+  beta: { app: DEX_BETA, secret: DEX_GITHUB_SECRET_BETA },
+  prod: { app: DEX_PROD, secret: DEX_GITHUB_SECRET_PROD },
 } as const;
-const deploy = (stage: keyof typeof DEX_SECRET, target: { auth: ConfigRef }) =>
+const deploy = (stage: keyof typeof DEX, target: { auth: ConfigRef }) =>
   ({
     chart: 'src/deploy/helm',
-    inlineValues: [{ auth: AUTH }, { auth: target.auth }],
-    secrets: [DEX_SECRET[stage]],
+    inlineValues: [
+      { auth: AUTH },
+      { auth: target.auth },
+      { dex: { github: DEX[stage].app } },
+    ],
+    secrets: [DEX[stage].secret],
     healthPath: '/health',
     timeoutSeconds: 900,
   }) as const;
