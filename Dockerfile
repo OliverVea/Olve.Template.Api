@@ -15,7 +15,8 @@ COPY src/frontend/ ./
 COPY --from=spec /repo/artifacts/clients ../../artifacts/clients
 RUN bun run build
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
+# An exact SDK tag, the same as the pipeline's (.pipelines/lib/toolchain.ts).
+FROM mcr.microsoft.com/dotnet/sdk:10.0.403-noble AS build
 RUN apt-get update && apt-get install -y clang zlib1g-dev
 WORKDIR /src
 

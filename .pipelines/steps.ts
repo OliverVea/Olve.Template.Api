@@ -9,14 +9,14 @@ import {
 import { API_TEST_CLIENT_SECRET, BETA_CLIENT } from './config';
 import { clientCredentialsToken } from './lib/auth';
 import { smokeTest, waitHealthy } from './lib/smoke';
-import { DOTNET_ENV, installBun } from './lib/toolchain';
+import { DOTNET_ENV, DOTNET_SDK_IMAGE, installBun } from './lib/toolchain';
 
 export const test = implement(
   step({
     name: 'test',
     description:
       "Runs `tools/check.sh --full`: the contract and TS client, formatting, the frontend's lint and build, the pipeline's types, the .NET build, then the unit and in-process API tests and the frontend's tests.",
-    image: 'mcr.microsoft.com/dotnet/sdk:10.0-noble',
+    image: DOTNET_SDK_IMAGE,
     input: { source: Source },
     timeoutSeconds: 1800,
   }),
@@ -36,7 +36,7 @@ export const betaTest = implement(
     name: 'beta-test',
     description:
       'Runs the whole API test suite against beta in-cluster, with a machine token, and checks the SPA is served.',
-    image: 'mcr.microsoft.com/dotnet/sdk:10.0-noble',
+    image: DOTNET_SDK_IMAGE,
     input: { source: Source, release: HelmRelease },
     secrets: [API_TEST_CLIENT_SECRET],
     config: [BETA_CLIENT],
