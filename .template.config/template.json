@@ -49,6 +49,7 @@
             ".git/**",
             ".claude/settings.local.json",
             ".template.config/**",
+            "README.md",
             "TestResults/**",
             "docs/design/template.md",
             "tools/pack/**",
@@ -58,7 +59,10 @@
             "src/frontend/dist/**",
             ".pipelines/.olve/**",
             ".pipelines/bun.lock"
-          ]
+          ],
+          "rename": {
+            "docs/README.project.md": "README.md"
+          }
         }
       ]
     }

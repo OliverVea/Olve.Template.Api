@@ -13,6 +13,8 @@ public sealed record MessagePageBody(IReadOnlyList<MessageBody> Items, int Total
 
 public sealed record AuthConfigBody(string? Authority, string? ClientId, string Scopes);
 
+public sealed record ProblemBody(string Message);
+
 public static class Wire
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
@@ -22,6 +24,10 @@ public static class Wire
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<T>(Options))!;
     }
+
+    /// <summary>Reads a failed response's <c>Problem[]</c> body.</summary>
+    public static async Task<IReadOnlyList<ProblemBody>> ReadProblemsAsync(this HttpResponseMessage response) =>
+        (await response.Content.ReadFromJsonAsync<IReadOnlyList<ProblemBody>>(Options))!;
 
     public static Task<HttpResponseMessage> PostJsonAsync(this HttpClient client, string path, object body) =>
         client.PostAsJsonAsync(path, body, Options);

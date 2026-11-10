@@ -1,4 +1,6 @@
+using Olve.Results;
 using Olve.Template.Api.Configuration;
+using Olve.Template.Api.Contract;
 using Olve.Template.Api.Messages;
 using Olve.Utilities.AsyncOnStartup;
 using Olve.Utilities.Stores;
@@ -28,7 +30,17 @@ app.UseStaticFiles();
 app.MapAuthentication();
 app.MapApi();
 
-// SPA client-side routing: any unmatched non-API GET returns index.html so deep links work.
+// An unmatched /api path is a 404 with a Problem[] body, not the SPA's index.html. Anonymous: the
+// fallback policy would answer 401 instead, hiding that the operation doesn't exist.
+app.MapFallback("/api/{**path}", context =>
+        TypedResults.Json(
+                new[] { new ResultProblem("No API operation at {0} {1}.", context.Request.Method, context.Request.Path.Value ?? "") }.ToContract(),
+                ServiceJsonContext.Default.IReadOnlyListProblem,
+                statusCode: StatusCodes.Status404NotFound)
+            .ExecuteAsync(context))
+    .AllowAnonymous();
+
+// SPA client-side routing: any other unmatched path returns index.html so deep links work.
 app.MapFallbackToFile("index.html").AllowAnonymous();
 
 // Start the host (the persister loads its snapshot here), then run one-shot startup tasks
