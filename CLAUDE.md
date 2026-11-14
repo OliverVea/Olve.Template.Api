@@ -17,8 +17,8 @@ decisions), [roadmap.md](docs/design/roadmap.md) (what's next).
   changes that one thing. Mechanical work inside agreed scope just gets done.
 - **Record only what the owner stated or agreed** in `docs/design/`. Proposals stay in chat until agreed.
   Record each decision right away and commit it. A new answer that contradicts a row replaces that row.
-- **The contract holds only what's built**, and a contract change is shown to the owner before the code
-  behind it. UI work starts with a mock the owner approves: load the `ovea-ui-mocks` skill.
+- **The contract holds only what's built**; a contract change is approved first (see Publishing). UI work
+  starts with a mock the owner approves: load the `ovea-ui-mocks` skill.
 - **Never make a check pass by changing what it checks against**: test expectations, recorded fixtures,
   the contract's existing responses. If one is wrong, say so and ask.
 - **After three failed attempts at the same problem, stop** and report what was tried.
@@ -32,6 +32,12 @@ decisions), [roadmap.md](docs/design/roadmap.md) (what's next).
 - **Steering stays current:** a change to how an agent works here updates this file, `docs/STANDARDS.md`
   or the skill it touches in the same commit.
 - Follow [`docs/STANDARDS.md`](docs/STANDARDS.md) (MUST/SHOULD rules for API behaviour, code and tests).
+
+## Publishing
+
+- Agents land their own changes without review. When GitHub requires a PR on `main` (it does here), open
+  one, wait for `tools/check.sh --full` to pass, then merge it yourself (squash); otherwise push to `main`.
+- **A spec change needs the owner's approval of the spec alone** before the code behind it is built: show the `src/spec/` diff in the session, or open a PR that holds only that diff. Nothing else rides along with it.
 
 ## Commands
 
