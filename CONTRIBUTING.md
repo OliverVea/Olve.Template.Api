@@ -22,6 +22,8 @@ docs/STANDARDS.md                       MUST/SHOULD rules for API behaviour, cod
 tools/check.sh                          The checks; the pipeline's test step runs --full
 tools/api-image.sh                      The API tests against the Docker image (the AOT check)
 tools/version.cs                        CalVer versions
+tools/template-parity.ts                What the olve-api template has that this repo lacks (Template parity)
+.template.json                          The template version this repo synced with, and its opt-outs
 ```
 
 ## Build and run
@@ -199,3 +201,81 @@ dotnet run tools/version.cs                                    # 0.0.0-dev+cb9a9
 dotnet run tools/version.cs -- --ci --run-number 42            # 2026.3.28.42+cb9a99b
 dotnet run tools/version.cs -- --ci --run-number 42 --rid linux-x64
 ```
+
+## Template parity
+
+This repo comes from the `olve-api` template. `.template.json` records the template version it last
+synced with and the template features it opts out of. `tools/template-parity.ts` compares the repo with
+the template's feature manifest (`template-features.json` on the template's `main`) and lists what is
+missing, adopted and opted out. It is a report: `tools/check.sh --full` runs it and never fails on it.
+
+```bash
+bun tools/template-parity.ts                    # against the template's main
+bun tools/template-parity.ts --manifest <path>  # against a template checkout's template-features.json
+bun tools/template-parity.ts --strict           # exit 1 when a feature is missing
+```
+
+A feature counts as adopted when its check passes. Opting out is the owner's decision, recorded with
+its reason:
+
+```json
+{
+  "template": "olve-api",
+  "version": "2026.11.14.23",
+  "features": {
+    "pwa": "declined: no browser UI yet",
+    "frontend-stack": "n/a: Lit by design"
+  }
+}
+```
+
+`declined` is a choice that may change; `n/a` means the feature doesn't fit this service. `adopted` marks
+a `manual` feature, one no file check can see. Features the template introduced after `version` are
+tagged "new since"; after taking them over (by hand, from the template's diff), raise `version` to the
+template version compared against.
+<!--#if (false) -->
+
+### Adding a feature to the manifest
+
+`template-features.json` lists the template's cross-cutting features, the ones a service should keep in
+step with. It stays in the template repo (`dotnet new` leaves it out); children fetch it from `main`.
+A change that adds such a feature to the template adds its entry in the same commit:
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Stable kebab-case id; children's `.template.json` refer to it, so it is never renamed |
+| `description` | One line |
+| `since` | The first template version (`yyyy.M.d.<run>`) that ships it; the date `yyyy.M.d` it lands on when the run isn't known yet; `null` while the template doesn't ship it |
+| `origin` | The child it came from, when it flowed up |
+| `check` | How to detect it in a repo (below) |
+
+Checks are one of a fixed set, so no feature needs code. Globs match the files git sees (tracked and
+untracked, not ignored), relative to the repo root; patterns are JavaScript regular expressions.
+
+| `kind` | Passes when |
+| --- | --- |
+| `file` (`glob`) | A file matches |
+| `contains` (`glob`, `pattern`) | A matching file contains the pattern |
+| `absent` (`glob`, `pattern`) | No matching file contains the pattern |
+| `package` (`name`, `atLeast`?) | `Directory.Packages.props`, a `.csproj` or a `package.json` references the package, at that version or newer |
+| `manual` | Never: only an `adopted` declaration counts |
+| `all` / `any` (`checks`) | Every / some nested check passes |
+
+Write checks for the layout every child shares (`src/**/*.cs`, `src/deploy/helm/…`), never with the
+template's own name in a path. Try a new check against the children before landing it
+(`--repo <checkout> --manifest template-features.json`). A feature the template should have but doesn't
+yet (`typed-ids`) is listed with `"since": null`: the template's own report shows it missing until it
+is built.
+
+### Features that flow up
+
+A child that builds something every service should have proposes it to the owner. Once agreed it goes
+in `docs/design/roadmap.md` with its origin. When the template ships it, its manifest entry carries
+`"origin": "<child>"`: the origin child's check already passes, and every other child sees it as
+missing. Where the design puts it in a package (Olve.Utilities), the check is a `package` check on that
+version, so children converge by bumping it.
+
+The pack project stamps the package version into the `.template.json` a new service gets (`0.0.0-dev`
+in this repo); a service generated with `--pwa false` declines `pwa` there. An option that leaves a
+feature out declines it the same way, with a `//#if` in `.template.json`.
+<!--#endif -->

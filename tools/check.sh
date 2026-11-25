@@ -3,7 +3,8 @@
 # definition and the .NET build.
 #
 #   tools/check.sh            every check
-#   tools/check.sh --full     every check and the tests (what the pipeline runs)
+#   tools/check.sh --full     every check, the tests and the template-parity report (what the
+#                             pipeline runs)
 #   tools/check.sh --fix      format first, then every check
 #   tools/check.sh --changed  only the checks that what changed against the upstream branch (and
 #                             uncommitted work) can break: docs need none; the contract, the
@@ -52,7 +53,7 @@ pipeline_deps() { [[ -d node_modules ]] || bun install; }
 if [[ "$mode" == "--fix" ]]; then
   step "format"
   (cd src/frontend && deps && bun run format >/dev/null) # DELETE-WITH-THE-FRONTEND
-  (cd .pipelines && pipeline_deps && bunx prettier --write '*.ts' 'lib/*.ts' >/dev/null)
+  (cd .pipelines && pipeline_deps && bunx prettier --write '*.ts' 'lib/*.ts' ../tools/*.ts >/dev/null)
   dotnet format Olve.Template.Api.slnx
 fi
 
@@ -61,7 +62,7 @@ step "contract"
 
 if has pipeline; then
   step "pipeline"
-  (cd .pipelines && pipeline_deps && bunx prettier --check '*.ts' 'lib/*.ts' && bunx tsc --noEmit -p .)
+  (cd .pipelines && pipeline_deps && bunx prettier --check '*.ts' 'lib/*.ts' ../tools/*.ts && bunx tsc --noEmit -p .)
   if command -v pl >/dev/null; then pl dev validate --dir .pipelines; fi
 fi
 
@@ -83,6 +84,10 @@ if [[ "$mode" == "--full" ]]; then
   # for 5 minutes is dumped with the tests still running, and the session ends after 15.
   dotnet test --no-build --timeout 15m --hangdump --hangdump-timeout 5m
   (cd src/frontend && bun run test) # DELETE-WITH-THE-FRONTEND
+
+  step "template parity"
+  # A report, never a failure: what the olve-api template has that this repo lacks (CONTRIBUTING.md).
+  bun tools/template-parity.ts
 fi
 
 printf '\nAll checks passed.\n'

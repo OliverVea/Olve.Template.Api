@@ -1,0 +1,299 @@
+{
+  "template": "olve-api",
+  "features": [
+    {
+      "id": "native-aot",
+      "description": "Native AOT publish on a chiseled runtime image",
+      "since": "2026.11.10.15",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "contains", "glob": "src/**/*.csproj", "pattern": "<PublishAot>true</PublishAot>" },
+          { "kind": "contains", "glob": "Dockerfile", "pattern": "chiseled" }
+        ]
+      }
+    },
+    {
+      "id": "aot-image-tests",
+      "description": "tools/api-image.sh: the API tests against the real Docker image",
+      "since": "2026.11.10.15",
+      "check": { "kind": "file", "glob": "tools/api-image.sh" }
+    },
+    {
+      "id": "calver",
+      "description": "CalVer versions from tools/version.cs (yyyy.M.d.<run>)",
+      "since": "2026.11.10.15",
+      "check": { "kind": "file", "glob": "tools/version.cs" }
+    },
+    {
+      "id": "central-packages",
+      "description": "Package versions only in Directory.Packages.props",
+      "since": "2026.11.10.15",
+      "check": {
+        "kind": "contains",
+        "glob": "Directory.Packages.props",
+        "pattern": "<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>"
+      }
+    },
+    {
+      "id": "olve-packages",
+      "description": "Olve.* packages at the template's version or newer",
+      "since": "2026.11.10.15",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "package", "name": "Olve.Results", "atLeast": "0.61.0" },
+          { "kind": "package", "name": "Olve.TypeSpec", "atLeast": "0.61.0" },
+          { "kind": "package", "name": "Olve.Utilities", "atLeast": "0.61.0" }
+        ]
+      }
+    },
+    {
+      "id": "banned-time-apis",
+      "description": "BannedApiAnalyzers with BannedSymbols.txt: real time only through TimeProvider",
+      "since": "2026.11.10.20",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "package", "name": "Microsoft.CodeAnalysis.BannedApiAnalyzers" },
+          { "kind": "contains", "glob": "src/**/BannedSymbols.txt", "pattern": "DateTime" }
+        ]
+      }
+    },
+    {
+      "id": "test-hang-dump",
+      "description": "check.sh --full dumps a hung test host (Microsoft.Testing.Extensions.HangDump)",
+      "since": "2026.11.10.15",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "package", "name": "Microsoft.Testing.Extensions.HangDump" },
+          { "kind": "contains", "glob": "tools/check.sh", "pattern": "--hangdump" }
+        ]
+      }
+    },
+    {
+      "id": "typespec-contract",
+      "description": "The API is a TypeSpec contract in src/spec/, compiled to the C# surface (Olve.TypeSpec), OpenAPI and a TS client",
+      "since": "2026.11.10.15",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "file", "glob": "src/spec/*.tsp" },
+          { "kind": "package", "name": "Olve.TypeSpec" }
+        ]
+      }
+    },
+    {
+      "id": "typed-ids",
+      "description": "Entity ids in the contract are typed (`@id(Model) scalar XId extends Uuid`, generating Id<T>), not plain uuid strings",
+      "since": null,
+      "check": { "kind": "contains", "glob": "src/spec/**/*.tsp", "pattern": "@id\\(" }
+    },
+    {
+      "id": "oidc-frontend-issuer",
+      "description": "OIDC JWT bearer that also trusts the SPA's issuer and client (Auth:FrontendAuthority, Auth:FrontendAudience)",
+      "since": "2026.11.10.19",
+      "check": { "kind": "contains", "glob": "src/**/*.cs", "pattern": "Auth:FrontendAuthority" }
+    },
+    {
+      "id": "allowlist-policy",
+      "description": "The sign-in allowlist (Auth:Allow) as an authorization policy that logs refusals",
+      "since": "2026.11.10.19",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "contains", "glob": "src/**/*.cs", "pattern": "Auth:Allow" },
+          { "kind": "contains", "glob": "src/**/*.cs", "pattern": "RequireAssertion" }
+        ]
+      }
+    },
+    {
+      "id": "jwt-diagnostic-events",
+      "description": "JwtBearer events that log why a token was rejected",
+      "since": "2026.11.10.15",
+      "check": { "kind": "contains", "glob": "src/**/*.cs", "pattern": "OnAuthenticationFailed" }
+    },
+    {
+      "id": "auth-disable",
+      "description": "Auth:Disable makes every endpoint anonymous (the chart's auth.mode: none)",
+      "since": "2026.11.10.19",
+      "check": { "kind": "contains", "glob": "src/**/*.cs", "pattern": "Auth:Disable" }
+    },
+    {
+      "id": "machine-tokens",
+      "description": "Named machine tokens (Auth:Tokens:<name> = sha256) acting past the allowlist",
+      "since": "2026.11.10.19",
+      "check": { "kind": "contains", "glob": "src/**/*.cs", "pattern": "Auth:Tokens" }
+    },
+    {
+      "id": "bundled-dex",
+      "description": "The chart runs Dex beside the app, with the stage's GitHub OAuth app in a Secret the chart renders",
+      "since": "2026.11.10.19",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "file", "glob": "src/deploy/helm/templates/dex-deployment.yaml" },
+          { "kind": "file", "glob": "src/deploy/helm/templates/dex-secret.yaml" }
+        ]
+      }
+    },
+    {
+      "id": "pipeline-dex-secrets",
+      "description": "The pipeline passes each stage's Dex GitHub secret (DEX_GITHUB_SECRET_BETA/_PROD) to its deploy",
+      "since": "2026.11.10.19",
+      "check": { "kind": "contains", "glob": ".pipelines/**/*.ts", "pattern": "DEX_GITHUB_SECRET_BETA" }
+    },
+    {
+      "id": "frontend-stack",
+      "description": "The SPA in vanilla Web Components + TypeScript with bun and biome",
+      "since": "2026.11.10.15",
+      "check": { "kind": "file", "glob": "src/frontend/biome.json" }
+    },
+    {
+      "id": "spa-same-origin",
+      "description": "The SPA served same-origin from wwwroot; unknown /api paths answer 404",
+      "since": "2026.11.10.15",
+      "check": { "kind": "contains", "glob": "src/**/*.cs", "pattern": "MapFallbackToFile|UseSpa|index\\.html" }
+    },
+    {
+      "id": "static-caching",
+      "description": "Cache-Control per SPA file: index, service worker and manifest revalidate, hashed assets are immutable",
+      "since": "2026.11.25",
+      "origin": "Olve.Regression",
+      "check": { "kind": "file", "glob": "src/**/StaticCaching.cs" }
+    },
+    {
+      "id": "pwa",
+      "description": "An installable web app: a web manifest, icons and a service worker",
+      "since": "2026.11.25",
+      "origin": "Olve.Regression",
+      "check": {
+        "kind": "any",
+        "checks": [
+          { "kind": "file", "glob": "src/frontend/public/manifest.webmanifest" },
+          { "kind": "file", "glob": "src/frontend/public/manifest.json" }
+        ]
+      }
+    },
+    {
+      "id": "json-logs-otlp",
+      "description": "JSON console logs; plain OTLP export (OpenTelemetry:Endpoint/Protocol/Headers), off by default",
+      "since": "2026.11.10.15",
+      "check": { "kind": "contains", "glob": "src/**/*.cs", "pattern": "OpenTelemetry:Endpoint" }
+    },
+    {
+      "id": "snapshot-persistence",
+      "description": "EntityStore state persisted through the ISnapshotStore seam (Storage:Mode)",
+      "since": "2026.11.10.15",
+      "check": { "kind": "contains", "glob": "src/**/*.cs", "pattern": "interface ISnapshotStore" }
+    },
+    {
+      "id": "tunit-tests",
+      "description": "Unit tests with TUnit, Rocks and Olve.Results.TUnit",
+      "since": "2026.11.10.15",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "package", "name": "TUnit" },
+          { "kind": "package", "name": "Rocks" },
+          { "kind": "package", "name": "Olve.Results.TUnit" }
+        ]
+      }
+    },
+    {
+      "id": "api-tests-any-target",
+      "description": "API tests over raw HTTP that run in-process or against any server (API_BASE_URL)",
+      "since": "2026.11.10.15",
+      "check": { "kind": "contains", "glob": "src/**/*.cs", "pattern": "API_BASE_URL" }
+    },
+    {
+      "id": "check-script",
+      "description": "tools/check.sh (--full/--fix/--changed/--hook), run by Claude Code's PreToolUse hook and .githooks/pre-push",
+      "since": "2026.11.10.15",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "contains", "glob": "tools/check.sh", "pattern": "--hook" },
+          { "kind": "contains", "glob": ".claude/settings.json", "pattern": "check\\.sh --hook" },
+          { "kind": "file", "glob": ".githooks/pre-push" }
+        ]
+      }
+    },
+    {
+      "id": "helm-clusterip",
+      "description": "A ClusterIP-only chart; routes live in Olve.Homelab",
+      "since": "2026.11.10.15",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "file", "glob": "src/deploy/helm/Chart.yaml" },
+          { "kind": "absent", "glob": "src/deploy/helm/templates/*.yaml", "pattern": "^kind:\\s*Ingress" }
+        ]
+      }
+    },
+    {
+      "id": "pipeline-beta-prod",
+      "description": "The .pipelines/ shape: build and test, deploy beta, API tests on beta, deploy prod, smoke-test prod",
+      "since": "2026.11.10.15",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "contains", "glob": ".pipelines/*.ts", "pattern": "deploy-beta" },
+          { "kind": "contains", "glob": ".pipelines/*.ts", "pattern": "deploy-prod" },
+          { "kind": "contains", "glob": ".pipelines/*.ts", "pattern": "beta-test" }
+        ]
+      }
+    },
+    {
+      "id": "standards-doc",
+      "description": "docs/STANDARDS.md: the MUST/SHOULD rules for API behaviour, code and tests",
+      "since": "2026.11.10.15",
+      "check": { "kind": "file", "glob": "docs/STANDARDS.md" }
+    },
+    {
+      "id": "design-docs",
+      "description": "docs/design/architecture.md and roadmap.md, recording only what the owner stated or agreed",
+      "since": "2026.11.10.15",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "file", "glob": "docs/design/architecture.md" },
+          { "kind": "file", "glob": "docs/design/roadmap.md" }
+        ]
+      }
+    },
+    {
+      "id": "agent-working-rules",
+      "description": "CLAUDE.md's 'How to work here' rules (ask more; never pass a check by changing it; stop after three failures; secrets)",
+      "since": "2026.11.10.20",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "contains", "glob": "CLAUDE.md", "pattern": "Ask more, assume less" },
+          { "kind": "contains", "glob": "CLAUDE.md", "pattern": "Never make a check pass" },
+          { "kind": "contains", "glob": "CLAUDE.md", "pattern": "three failed attempts" },
+          { "kind": "contains", "glob": "CLAUDE.md", "pattern": "Secrets stay out of the transcript" }
+        ]
+      }
+    },
+    {
+      "id": "inclusive-vocabulary",
+      "description": "CLAUDE.md asks for inclusive vocabulary (allowlist/denylist, main, primary/replica)",
+      "since": "2026.11.10.21",
+      "check": { "kind": "contains", "glob": "CLAUDE.md", "pattern": "[Ii]nclusive" }
+    },
+    {
+      "id": "template-parity",
+      "description": "tools/template-parity.ts and .template.json: this report",
+      "since": "2026.11.25",
+      "check": {
+        "kind": "all",
+        "checks": [
+          { "kind": "file", "glob": "tools/template-parity.ts" },
+          { "kind": "file", "glob": ".template.json" }
+        ]
+      }
+    }
+  ]
+}

@@ -31,6 +31,12 @@ decisions), [roadmap.md](docs/design/roadmap.md) (what's next).
 - **Comments are rare**: one short line for a non-obvious why or a gotcha, nothing that restates the code.
 - **Steering stays current:** a change to how an agent works here updates this file, `docs/STANDARDS.md`
   or the skill it touches in the same commit.
+<!--#if (false) -->
+- **Template features:** a change that adds a feature every service should keep in step with adds its
+  `template-features.json` entry in the same commit (CONTRIBUTING.md, "Adding a feature to the manifest").
+<!--#endif -->
+- **Template parity is a report:** `tools/template-parity.ts` lists what the template has that this repo
+  lacks. Adopting, declining or marking a feature n/a in `.template.json` is the owner's call.
 - Follow [`docs/STANDARDS.md`](docs/STANDARDS.md) (MUST/SHOULD rules for API behaviour, code and tests).
 
 ## Publishing

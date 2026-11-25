@@ -72,6 +72,7 @@
             "TestResults/**",
             "docs/design/template.md",
             "tools/pack/**",
+            "template-features.json",
             "artifacts/**",
             "data/**",
             "**/node_modules/**",
@@ -115,6 +116,7 @@
         "+x": [
           "tools/check.sh",
           "tools/api-image.sh",
+          "tools/template-parity.ts",
           ".githooks/pre-push"
         ]
       },
