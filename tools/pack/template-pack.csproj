@@ -37,7 +37,20 @@
       ../../.pipelines/bun.lock;
       ../../.claude/settings.local.json;
       ../../.claude/worktrees/**;
-      ../../tools/pack/**" />
+      ../../tools/pack/**;
+      ../../.template.json" />
     <None Include="../../README.md" Pack="true" PackagePath="/" Link="package-readme.md" />
   </ItemGroup>
+
+  <!-- A generated service's .template.json records the template version it came from: this package's. -->
+  <Target Name="StampTemplateVersion" BeforeTargets="_GetPackageFiles">
+    <PropertyGroup>
+      <StampedTemplateJson>$(IntermediateOutputPath)template.json</StampedTemplateJson>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(StampedTemplateJson)" Overwrite="true"
+      Lines="$([MSBuild]::Escape($([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../../.template.json').Replace('0.0.0-dev', '$(PackageVersion)').TrimEnd())))" />
+    <ItemGroup>
+      <None Include="$(StampedTemplateJson)" Pack="true" PackagePath="content/.template.json" />
+    </ItemGroup>
+  </Target>
 </Project>

@@ -25,6 +25,8 @@ The design lives in [docs/design/](docs/design/); building it is in [CONTRIBUTIN
 - Native AOT, a chiseled image, JSON logs on stdout; OTLP export off until configured.
 - API tests over raw HTTP that run in-process, against the Docker image or against beta.
 - `tools/check.sh`: the pipeline's checks, run locally and before every push.
+- `.template.json` (the template version it came from) and `tools/template-parity.ts`, which reports
+  what later template versions added that the service lacks.
 
 ## References
 
