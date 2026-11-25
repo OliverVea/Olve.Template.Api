@@ -33,6 +33,20 @@ src/frontend/
 │  │  └─ message-list.ts      <message-list> — the first real component (CRUD)
 ```
 
+<!--#if (pwa) -->
+The SPA is an installable web app (PWA); how its service worker caches and updates is in
+[CONTRIBUTING.md](../../CONTRIBUTING.md#the-installable-app-pwa).
+
+```
+src/frontend/
+├─ public/                    copied into dist/ as is: manifest.webmanifest, icons/
+├─ vite-plugin-sw.ts          writes dist/sw.js after the build
+└─ src/
+   ├─ pwa/                    registers /sw.js, the update flow and <update-banner>; the sw.js generator
+   └─ sw/                     the service worker: shell.js, and extensions.js for a service's handlers
+```
+<!--#endif -->
+
 ## Run it
 
 ```bash

@@ -20,6 +20,8 @@ The design lives in [docs/design/](docs/design/); building it is in [CONTRIBUTIN
 
 - The contract in `src/spec/` and a worked example, `Messages`: `Id<T>`, an `EntityStore<Message>`,
   page pagination, one `[OperationHandler]` class per operation, a welcome message seeded on startup.
+- An installable SPA (a PWA: manifest, icons, a service worker that offers each new build);
+  `--pwa false` leaves it out.
 - Native AOT, a chiseled image, JSON logs on stdout; OTLP export off until configured.
 - API tests over raw HTTP that run in-process, against the Docker image or against beta.
 - `tools/check.sh`: the pipeline's checks, run locally and before every push.

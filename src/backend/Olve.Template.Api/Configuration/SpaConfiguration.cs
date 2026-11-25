@@ -36,6 +36,7 @@ public static class SpaConfiguration
             if ((HttpMethods.IsGet(request.Method) || HttpMethods.IsHead(request.Method)) && !isFile && index.Exists)
             {
                 context.Response.ContentType = "text/html; charset=utf-8";
+                context.Response.Headers.CacheControl = StaticCaching.Revalidate;
                 await context.Response.SendFileAsync(index);
                 return;
             }

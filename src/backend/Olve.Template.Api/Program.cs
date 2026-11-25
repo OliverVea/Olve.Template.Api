@@ -22,8 +22,10 @@ EventDispatch.OnHandlerException = ex => eventLogger.LogError(ex, "A store event
 // Static assets and the index fallback are anonymous — the RequireAuthenticatedUser fallback
 // policy would otherwise 401 them. In local dev the SPA is served by Vite (`bun run dev`),
 // so wwwroot is only populated in the container and this no-ops when running `dotnet run`.
+// StaticCaching sets each file's Cache-Control.
+app.UseStaticCaching();
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(StaticCaching.Options());
 
 // Before authentication: an unmatched /api path answers 404 with a Problem[] to anyone, where the
 // fallback policy would answer 401. Any other unmatched path gets the SPA.
