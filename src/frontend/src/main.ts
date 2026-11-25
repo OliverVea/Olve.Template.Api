@@ -3,6 +3,11 @@ import * as auth from "./auth/oidc.js";
 import { escapeHtml } from "./base-element.js";
 import { MessageList } from "./components/message-list.js";
 
+//#if (pwa)
+import { registerServiceWorker } from "./pwa/register.js";
+import { showUpdateBanner } from "./pwa/update-banner.js";
+
+//#endif
 // In dev, same-origin → Vite proxies /api to the backend (see vite.config.ts). In a build, set
 // VITE_API_BASE_URL to point at the API host (defaults to same-origin, which is how we deploy).
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? window.location.origin;
@@ -44,3 +49,9 @@ auth
   .init()
   .then(renderAuthBar)
   .catch(() => renderAuthBar());
+//#if (pwa)
+
+// The service worker exists only in a build (`bun run dev` has none) and needs a secure context.
+if (import.meta.env.PROD && "serviceWorker" in navigator && window.isSecureContext)
+  registerServiceWorker({ onUpdate: showUpdateBanner }).catch(() => {});
+//#endif

@@ -1,6 +1,10 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
+//#if (pwa)
+import { serviceWorker } from "./vite-plugin-sw.ts";
+
+//#endif
 // The client generated from the contract (artifacts/, gitignored): `cd src/spec && bun run build` writes it.
 const api = fileURLToPath(new URL("../../artifacts/clients/ts", import.meta.url));
 
@@ -16,6 +20,9 @@ const api = fileURLToPath(new URL("../../artifacts/clients/ts", import.meta.url)
 export default defineConfig(() => {
   const target = process.env.VITE_API_TARGET ?? "http://localhost:18080";
   return {
+    //#if (pwa)
+    plugins: [serviceWorker()],
+    //#endif
     resolve: { alias: { "@api": api } },
     server: {
       // The SPA calls the API under /api (same-origin); Vite forwards that to the backend.

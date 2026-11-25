@@ -22,6 +22,19 @@
       "valueTransform": "kebabCase",
       "replaces": "olve-template-api",
       "fileRename": "olve-template-api"
+    },
+    "shortName": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "lastSegment",
+      "replaces": "TemplateApi",
+      "description": "The installed app's short name: the last part of the service name."
+    },
+    "pwa": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "true",
+      "description": "An installable web app: a manifest, icons and a service worker that caches the SPA and offers new builds."
     }
   },
   "forms": {
@@ -39,6 +52,11 @@
     },
     "lowerCaseIt": {
       "identifier": "lowerCase"
+    },
+    "lastSegment": {
+      "identifier": "replace",
+      "pattern": "^.*\\.",
+      "replacement": ""
     }
   },
   "sources": [
@@ -63,7 +81,23 @@
           ],
           "rename": {
             "docs/README.project.md": "README.md"
-          }
+          },
+          "copyOnly": [
+            "**/*.png"
+          ]
+        },
+        {
+          "condition": "(!pwa)",
+          "exclude": [
+            "src/frontend/src/sw/**",
+            "src/frontend/src/pwa/**",
+            "src/frontend/vite-plugin-sw.ts",
+            "src/frontend/public/manifest.webmanifest",
+            "src/frontend/public/icons/icon-192.png",
+            "src/frontend/public/icons/icon-512.png",
+            "src/frontend/public/icons/icon-maskable-512.png",
+            "src/backend/Olve.Template.Api.ApiTests/PwaTests.cs"
+          ]
         }
       ]
     }

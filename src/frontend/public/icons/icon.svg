@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Olve.Template.Api</title>
+  <rect width="512" height="512" rx="112" fill="#1e293b"/>
+  <g fill="#e2e8f0">
+    <rect x="128" y="152" width="256" height="48" rx="24"/>
+    <rect x="128" y="232" width="192" height="48" rx="24" fill="#38bdf8"/>
+    <rect x="128" y="312" width="224" height="48" rx="24"/>
+  </g>
+</svg>

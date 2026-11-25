@@ -96,6 +96,45 @@ Nothing generated is committed. There is no C# client: the API tests talk raw HT
 | DELETE | `/api/messages/{id}` | Yes | Delete a message |
 | GET | `/openapi/v1.json` | No | The OpenAPI document |
 
+## The SPA's files
+
+`StaticCaching` (`Configuration/StaticCaching.cs`) sets every SPA file's `Cache-Control`. The image's
+files all carry a 1970 mtime, so without it a browser keeps a stale `index.html` for years, and an ETag
+(mtime XOR length) can't tell two builds' pages apart: those files ignore the browser's validators and
+always answer 200.
+
+| Path | `Cache-Control` |
+|------|-----------------|
+| `/assets/*` (Vite's content-hashed bundle) | `public, max-age=31536000, immutable` |
+| `/icons/*` | `public, max-age=86400` |
+| `/sw.js`, `/manifest.webmanifest` | `no-store`: no cache on the way (browser, proxy, CDN) holds back an update |
+| Everything else (`/`, `index.html`, client-side routes) | `no-cache` |
+<!--#if (pwa) -->
+
+## The installable app (PWA)
+
+The SPA is an installable web app: `src/frontend/public/manifest.webmanifest` (name, short name, theme
+colours, `display: standalone`), the icons in `public/icons/` (`icon.svg`, 192 and 512 px PNGs, a
+maskable 512, the 180 px `apple-touch-icon.png` for iOS; replace them with the service's own), and a
+service worker at `/sw.js`.
+
+- **The worker.** The build writes `dist/sw.js` (`vite-plugin-sw.ts`): every built file precached under
+  a cache named for the build's version, a hash of the build. It answers the precached files from that
+  cache and page loads from the network, with the cached `index.html` as the offline fallback. It never
+  touches `/api`, `/dex`, `/callback`, `/health` or `/openapi`, and caches nothing at runtime. On
+  activate it deletes older versions' caches. `bun run dev` has no worker.
+- **Updates.** A deploy changes `sw.js`; the browser checks it on each load, when the page is shown
+  again and hourly. The new worker installs beside the running one and waits; the page shows "A new
+  version is available. Reload", and only Reload lets the new worker take over and reloads the page,
+  once (`src/frontend/src/pwa/register.ts`).
+- **A service's own handlers** (`push`, `notificationclick`, …) go in `src/frontend/src/sw/extensions.js`,
+  which the build appends to the shell (`src/sw/shell.js`); leave the shell as it is.
+
+`PwaTests` and `SpaCachingTests` check the served files and their headers against a target that serves
+the SPA (`tools/api-image.sh`, beta); in-process they skip. The worker and the update flow have unit
+tests in `src/frontend/src/pwa/`.
+<!--#endif -->
+
 ## Tests
 
 `dotnet test` runs the unit tests and the API tests in-process (`dotnet test -p:RunApiTests=false` for
